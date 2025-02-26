@@ -19,15 +19,7 @@ export const getGames = (): Record<string, Game> => {
   const isMainnet = selectedChainConfig.chainId === ChainId.SN_MAIN;
   if (isLocalKatana) {
     return {
-      "0x063ff13e3394a65590dfae8f7fd736624a0c4f10c10cf88d1b912edb2d1404f3": {
-        name: "Loot Survivor",
-        Icon: function LootSurvivorIcon(
-          props: ImgHTMLAttributes<HTMLImageElement>
-        ) {
-          return <img src={lootSurvivor} {...props} />;
-        },
-      },
-      "0x054f1cc22c1582b94edebc8ae78e8999a3f957585abd14ad10733a9a86adc827": {
+      "0x00dac2345ab036999e1131322edcbe687f3c30ad79163498df10ad01168df323": {
           name: "Jokers of Neon",
           Icon: function JokersOfNeonIcon(
             props: ImgHTMLAttributes<HTMLImageElement>
@@ -36,7 +28,6 @@ export const getGames = (): Record<string, Game> => {
           },
         },
       };
-    };
   } else if (isSepolia) {
     return {
       "0x0711a2ed50ba5442259950cf741b81f66f17b9b751e44d0368a87926a3233e3e": {
