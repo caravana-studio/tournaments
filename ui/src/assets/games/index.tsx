@@ -19,7 +19,7 @@ export const getGames = (): Record<string, Game> => {
   const isMainnet = selectedChainConfig.chainId === ChainId.SN_MAIN;
   if (isLocalKatana) {
     return {
-      "0x00dac2345ab036999e1131322edcbe687f3c30ad79163498df10ad01168df323": {
+      "0x00ae98ffbbba09d92e6b6456e3d40b746176599ceac91b2855cee42b290c59eb": { // TODO: change to the correct game system address 
           name: "Jokers of Neon",
           Icon: function JokersOfNeonIcon(
             props: ImgHTMLAttributes<HTMLImageElement>

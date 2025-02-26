@@ -51,3 +51,11 @@ sozo execute game_mock initializer
 
 #------------------
 echo "--- DONE! 👍"
+
+
+# Store sozo inspect result once
+inspect_result=$(sozo inspect)
+world_address=$(echo "$inspect_result" | awk '/World/ {getline; getline; print $3}')
+
+echo -e "\n✅ Init Torii!"
+torii --world $world_address --http.cors_origins "*" --http.port 8081 --relay.port 9094 --relay.webrtc_port 9095 --relay.websocket_port 9096
