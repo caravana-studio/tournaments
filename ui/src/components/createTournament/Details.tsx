@@ -77,11 +77,11 @@ const Details = ({ form }: StepProps) => {
                           field.value === key && "bg-retro-green-dark"
                         }`}
                         onClick={() => field.onChange(key)}
-                        disabled={
-                          !gameData.find(
-                            (game) => game.contract_address === key
-                          )
-                        }
+                        // disabled={
+                        //   !gameData.find(
+                        //     (game) => game.contract_address === key
+                        //   )
+                        // }
                       >
                         <TokenGameIcon size="md" game={key} />
                         <Tooltip delayDuration={50}>

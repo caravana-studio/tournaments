@@ -27,6 +27,15 @@ export const getGames = (): Record<string, Game> => {
           return <img src={lootSurvivor} {...props} />;
         },
       },
+      "0x054f1cc22c1582b94edebc8ae78e8999a3f957585abd14ad10733a9a86adc827": {
+          name: "Jokers of Neon",
+          Icon: function JokersOfNeonIcon(
+            props: ImgHTMLAttributes<HTMLImageElement>
+          ) {
+            return <img src={jokersOfNeon} {...props} />;
+          },
+        },
+      };
     };
   } else if (isSepolia) {
     return {
