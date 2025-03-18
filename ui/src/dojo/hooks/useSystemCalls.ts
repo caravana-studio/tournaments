@@ -5,7 +5,7 @@ import {
   Prize,
   Token,
   EntryFee,
-  QualificationProof,
+  QualificationProofEnum,
   PrizeTypeEnum,
 } from "@/generated/models.gen";
 import {
@@ -19,10 +19,8 @@ import {
   AccountInterface,
 } from "starknet";
 import { useToast } from "@/hooks/useToast";
-import { useOptimisticUpdates } from "@/dojo/hooks/useOptimisticUpdates";
 import { feltToString } from "@/lib/utils";
 import { useTournamentContracts } from "@/dojo/hooks/useTournamentContracts";
-import { ChainId } from "@/dojo/config";
 
 // Type for the transformed tournament
 type ExecutableTournament = Omit<Tournament, "metadata"> & {
@@ -44,22 +42,11 @@ const prepareForExecution = (tournament: Tournament): ExecutableTournament => {
   };
 };
 
-export function selectTournament(client: any, isMainnet: boolean): any {
-  return isMainnet ? client["LSTournament"] : client["tournament_mock"];
-}
-
 export const useSystemCalls = () => {
-  const { client, selectedChainConfig } = useDojo();
+  const { client } = useDojo();
   const { account, address } = useAccount();
   const { toast } = useToast();
-  const {
-    applyTournamentEntryUpdate,
-    applyTournamentPrizeUpdate,
-    applyTournamentCreateAndAddPrizesUpdate,
-  } = useOptimisticUpdates();
   const { tournamentAddress } = useTournamentContracts();
-
-  const isMainnet = selectedChainConfig.chainId === ChainId.SN_MAIN;
 
   // Tournament
 
@@ -67,18 +54,10 @@ export const useSystemCalls = () => {
     entryFeeToken: CairoOption<EntryFee>,
     tournamentId: BigNumberish,
     tournamentName: string,
-    newEntryCount: BigNumberish,
     player_name: BigNumberish,
     player_address: BigNumberish,
-    qualification: CairoOption<QualificationProof>,
-    gameCount: BigNumberish
+    qualification: CairoOption<QualificationProofEnum>
   ) => {
-    const { wait, revert, confirm } = applyTournamentEntryUpdate(
-      tournamentId,
-      newEntryCount,
-      gameCount
-    );
-
     try {
       let calls = [];
       if (entryFeeToken.isSome()) {
@@ -86,7 +65,7 @@ export const useSystemCalls = () => {
           contractAddress: entryFeeToken.Some?.token_address!,
           entrypoint: "approve",
           calldata: CallData.compile([
-            tournamentId,
+            tournamentAddress,
             entryFeeToken.Some?.amount!,
             "0",
           ]),
@@ -103,11 +82,7 @@ export const useSystemCalls = () => {
         ]),
       });
 
-      const tx = isMainnet
-        ? await account?.execute(calls)
-        : account?.execute(calls);
-
-      await wait();
+      const tx = await account?.execute(calls);
 
       if (tx) {
         toast({
@@ -116,11 +91,8 @@ export const useSystemCalls = () => {
         });
       }
     } catch (error) {
-      revert();
       console.error("Error executing enter tournament:", error);
       throw error;
-    } finally {
-      confirm();
     }
   };
 
@@ -146,9 +118,7 @@ export const useSystemCalls = () => {
         });
       }
 
-      const tx = isMainnet
-        ? await account?.execute(calls)
-        : account?.execute(calls);
+      const tx = await account?.execute(calls);
 
       if (tx) {
         toast({
@@ -157,59 +127,44 @@ export const useSystemCalls = () => {
         });
       }
     } catch (error) {
-      // revert();
       console.error("Error executing submit scores:", error);
       throw error;
-    } finally {
-      // confirm();
     }
   };
 
-  const approveAndAddPrize = async (
+  const approveAndAddPrizes = async (
     tournamentId: BigNumberish,
     tournamentName: string,
-    prize: Prize,
+    prizes: Prize[],
     showToast: boolean
   ) => {
-    toast({
-      title: "Adding Prize...",
-      description: `Adding prize for tournament ${tournamentName}`,
-    });
-
-    const { wait, revert, confirm } = applyTournamentPrizeUpdate(
-      tournamentId,
-      prize
-    );
-
     try {
       let calls = [];
-      calls.push({
-        contractAddress: prize.token_address,
-        entrypoint: "approve",
-        calldata: CallData.compile([
-          tournamentAddress,
-          prize.token_type.activeVariant() === "erc20"
-            ? prize.token_type.variant.erc20?.token_amount!
-            : prize.token_type.variant.erc721?.token_id!,
-          "0",
-        ]),
-      });
-      calls.push({
-        contractAddress: tournamentAddress,
-        entrypoint: "add_prize",
-        calldata: CallData.compile([
-          tournamentId,
-          prize.token_address,
-          prize.token_type,
-          prize.payout_position,
-        ]),
-      });
+      for (const prize of prizes) {
+        calls.push({
+          contractAddress: prize.token_address,
+          entrypoint: "approve",
+          calldata: CallData.compile([
+            tournamentAddress,
+            prize.token_type.activeVariant() === "erc20"
+              ? prize.token_type.variant.erc20?.amount!
+              : prize.token_type.variant.erc721?.token_id!,
+            "0",
+          ]),
+        });
+        calls.push({
+          contractAddress: tournamentAddress,
+          entrypoint: "add_prize",
+          calldata: CallData.compile([
+            tournamentId,
+            prize.token_address,
+            prize.token_type,
+            prize.payout_position,
+          ]),
+        });
+      }
 
-      const tx = isMainnet
-        ? await account?.execute(calls)
-        : account?.execute(calls);
-
-      await wait();
+      const tx = await account?.execute(calls);
 
       if (showToast && tx) {
         toast({
@@ -218,11 +173,8 @@ export const useSystemCalls = () => {
         });
       }
     } catch (error) {
-      revert();
       console.error("Error executing add prize:", error);
       throw error;
-    } finally {
-      confirm();
     }
   };
 
@@ -230,11 +182,6 @@ export const useSystemCalls = () => {
     tournament: Tournament,
     prizes: Prize[]
   ) => {
-    const { revert, confirm } = applyTournamentCreateAndAddPrizesUpdate(
-      tournament,
-      prizes
-    );
-
     const executableTournament = prepareForExecution(tournament);
 
     try {
@@ -278,9 +225,7 @@ export const useSystemCalls = () => {
         calls.push(addPrizesCall);
       }
 
-      const tx = isMainnet
-        ? await account?.execute(calls)
-        : account?.execute(calls);
+      const tx = await account?.execute(calls);
 
       if (tx) {
         toast({
@@ -291,11 +236,8 @@ export const useSystemCalls = () => {
         });
       }
     } catch (error) {
-      revert();
       console.error("Error executing create tournament:", error);
       throw error;
-    } finally {
-      confirm();
     }
   };
 
@@ -314,9 +256,7 @@ export const useSystemCalls = () => {
         });
       }
 
-      const tx = isMainnet
-        ? await account?.execute(calls)
-        : account?.execute(calls);
+      const tx = await account?.execute(calls);
 
       if (tx) {
         toast({
@@ -410,22 +350,28 @@ export const useSystemCalls = () => {
     await account?.execute(calls);
   };
 
-  const mintErc20 = async (recipient: string, amount: Uint256) => {
-    const resolvedClient = await client;
-    await resolvedClient.erc20_mock.mint(
-      account as unknown as Account | AccountInterface,
-      recipient,
-      amount
-    );
+  const mintErc20 = async (
+    tokenAddress: string,
+    recipient: string,
+    amount: Uint256
+  ) => {
+    await account?.execute({
+      contractAddress: tokenAddress,
+      entrypoint: "mint",
+      calldata: [recipient, amount],
+    });
   };
 
-  const mintErc721 = async (recipient: string, tokenId: Uint256) => {
-    const resolvedClient = await client;
-    await resolvedClient.erc721_mock.mint(
-      account as unknown as Account | AccountInterface,
-      recipient,
-      tokenId
-    );
+  const mintErc721 = async (
+    tokenAddress: string,
+    recipient: string,
+    tokenId: Uint256
+  ) => {
+    await account?.execute({
+      contractAddress: tokenAddress,
+      entrypoint: "mint",
+      calldata: [recipient, tokenId],
+    });
   };
 
   const getErc20Balance = async (address: string) => {
@@ -441,7 +387,7 @@ export const useSystemCalls = () => {
   return {
     approveAndEnterTournament,
     submitScores,
-    approveAndAddPrize,
+    approveAndAddPrizes,
     createTournamentAndApproveAndAddPrizes,
     claimPrizes,
     endGame,

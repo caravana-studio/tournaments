@@ -301,18 +301,6 @@ export const tokens = [
       "https://imagedelivery.net/0xPAQaDtnQhBs8IzYRIlNg/95515b0e-1230-4158-10f1-56888f613c00/logo",
   },
   {
-    name: "Also Ekubo Protocol",
-    symbol: "MOCHI",
-    decimals: 18,
-    l2_token_address:
-      "0x075afe6402ad5a5c20dd25e10ec3b3986acaa647b77e4ae24b0cbc9a54a27a87",
-    sort_order: 1,
-    total_supply: 10000000,
-    hidden: true,
-    logo_url:
-      "https://imagedelivery.net/0xPAQaDtnQhBs8IzYRIlNg/e623fa00-5b58-4b38-1d08-67983128b600/logo",
-  },
-  {
     name: "Ekubo Protocol",
     symbol: "EKUBO",
     decimals: 18,

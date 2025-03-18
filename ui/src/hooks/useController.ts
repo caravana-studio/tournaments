@@ -3,6 +3,8 @@ import { useAccount, useConnect } from "@starknet-react/core";
 import { lookupAddresses } from "@cartridge/controller";
 import { ControllerConnector } from "@cartridge/connector";
 import { supportedConnectorIds } from "@/lib/connectors";
+import { ChainId } from "@/dojo/setup/networks";
+import { stringToFelt } from "@/lib/utils";
 
 // sync from here:
 // https://github.com/cartridge-gg/controller/blob/main/packages/account-wasm/src/constants.rs
@@ -65,6 +67,34 @@ export const useConnectController = () => {
 
   return {
     connectController,
+  };
+};
+
+export const useControllerSwitchChain = () => {
+  const controllerConnector = useConnectedController();
+
+  const switchToMainnet = async () => {
+    await controllerConnector?.controller.switchStarknetChain(
+      stringToFelt(ChainId.SN_MAIN).toString()
+    );
+  };
+
+  const switchToSepolia = async () => {
+    await controllerConnector?.controller.switchStarknetChain(
+      stringToFelt(ChainId.SN_SEPOLIA).toString()
+    );
+  };
+
+  const switchToSlot = async () => {
+    await controllerConnector?.controller.switchStarknetChain(
+      stringToFelt(ChainId.WP_BUDOKAN).toString()
+    );
+  };
+
+  return {
+    switchToMainnet,
+    switchToSepolia,
+    switchToSlot,
   };
 };
 

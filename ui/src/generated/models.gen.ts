@@ -267,7 +267,7 @@ export interface Tournament {
   schedule: Schedule;
   game_config: GameConfig;
   entry_fee: CairoOption<EntryFee>;
-  entry_requirement: CairoOption<EntryRequirementEnum>;
+  entry_requirement: CairoOption<EntryRequirement>;
 }
 
 // Type definition for `tournaments::components::models::tournament::TournamentConfig` struct
@@ -301,16 +301,21 @@ export interface TournamentValue {
   schedule: Schedule;
   game_config: GameConfig;
   entry_fee: CairoOption<EntryFee>;
-  entry_requirement: CairoOption<EntryRequirementEnum>;
+  entry_requirement: CairoOption<EntryRequirement>;
 }
 
-// Type definition for `tournaments::components::models::tournament::EntryRequirement` enum
 export type EntryRequirement = {
+  entry_limit: CairoOption<BigNumberish>;
+  entry_requirement_type: EntryRequirementTypeEnum;
+};
+
+// Type definition for `tournaments::components::models::tournament::EntryRequirementType` enum
+export type EntryRequirementType = {
   token: string;
   tournament: TournamentType;
   allowlist: Array<string>;
 };
-export type EntryRequirementEnum = CairoCustomEnum;
+export type EntryRequirementTypeEnum = CairoCustomEnum;
 
 // Type definition for `tournaments::components::models::tournament::PrizeType` enum
 export type PrizeType = {
@@ -346,6 +351,7 @@ export type QualificationProof = {
   // For qualifying via NFT ownership
   NFT: NFTQualification;
 };
+export type QualificationProofEnum = CairoCustomEnum;
 
 // Type definition for `tournaments::components::models::tournament::TournamentQualification` struct
 export type TournamentQualification = {

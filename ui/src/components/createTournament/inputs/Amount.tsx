@@ -8,10 +8,10 @@ interface AmountInputProps {
 
 const AmountInput = ({ value, onChange }: AmountInputProps) => {
   const PREDEFINED_AMOUNTS = [
+    { value: 1, label: "$1" },
     { value: 5, label: "$5" },
     { value: 10, label: "$10" },
     { value: 50, label: "$50" },
-    { value: 100, label: "$100" },
   ];
   return (
     <div className="flex flex-row gap-2">

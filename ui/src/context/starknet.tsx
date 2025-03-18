@@ -1,75 +1,120 @@
 "use client";
-import { useMemo, useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Chain } from "@starknet-react/chains";
 import { jsonRpcProvider, StarknetConfig } from "@starknet-react/core";
 import React from "react";
-import { useChainConnectors } from "../lib/connectors";
-import {
-  DojoAppConfig,
-  dojoContextConfig,
-  getDojoChainConfig,
-  ChainId,
-  getStarknetProviderChains,
-} from "@/dojo/config";
+import { ChainId, CHAINS, getDefaultChainId } from "@/dojo/setup/networks";
 import {
   predeployedAccounts,
   PredeployedAccountsConnector,
 } from "@dojoengine/predeployed-connector";
+import { initializeController } from "@/dojo/setup/controllerSetup";
+import { manifests } from "@/dojo/setup/config";
 
-export function StarknetProvider({
-  children,
-  dojoAppConfig,
-}: {
-  children: React.ReactNode;
-  dojoAppConfig: DojoAppConfig;
-}) {
-  function rpc(chain: Chain) {
-    const nodeUrl = chain.rpcUrls.default.http[0];
-    return {
-      nodeUrl,
-    };
+// Initialize controller outside component
+const initController = () => {
+  if (getDefaultChainId() === ChainId.KATANA_LOCAL) {
+    return undefined;
   }
-  const provider = jsonRpcProvider({ rpc });
 
-  const chains: Chain[] = useMemo(
-    () => getStarknetProviderChains(dojoAppConfig.supportedChainIds),
-    [dojoAppConfig]
-  );
+  try {
+    const chainRpcUrls: { rpcUrl: string }[] = Object.values(CHAINS)
+      .filter((chain) => chain.chainId !== ChainId.KATANA_LOCAL)
+      .map((chain) => ({
+        rpcUrl: chain?.chain?.rpcUrls.default.http[0] ?? "",
+      }));
 
-  const selectedChainId = useMemo(
-    () => dojoAppConfig.initialChainId,
-    [dojoAppConfig]
-  );
+    return initializeController(
+      chainRpcUrls,
+      getDefaultChainId(),
+      manifests[getDefaultChainId()]
+    );
+  } catch (error) {
+    console.error(
+      `Failed to initialize controller for chain ${getDefaultChainId()}:`,
+      error
+    );
+    return undefined;
+  }
+};
 
-  const selectedChainConfig = useMemo(
-    () => getDojoChainConfig(selectedChainId),
-    [dojoContextConfig, selectedChainId]
-  );
+// Initialize controller once
+const controller = initController();
 
-  const chainConnectors = useChainConnectors(
-    dojoAppConfig,
-    selectedChainConfig!
-  );
+export function StarknetProvider({ children }: { children: React.ReactNode }) {
+  const [predeployedConnectors, setPredeployedConnectors] = useState<
+    PredeployedAccountsConnector[]
+  >([]);
+  const defaultChainId = getDefaultChainId();
 
-  const [pa, setPa] = useState<PredeployedAccountsConnector[]>([]);
+  // Create provider with memoization
+  const provider = jsonRpcProvider({
+    rpc: (chain: Chain) => {
+      switch (chain) {
+        case CHAINS[ChainId.SN_MAIN].chain:
+          return {
+            nodeUrl: CHAINS[ChainId.SN_MAIN].chain?.rpcUrls.default.http[0],
+          };
+        case CHAINS[ChainId.SN_SEPOLIA].chain:
+          return {
+            nodeUrl: CHAINS[ChainId.SN_SEPOLIA].chain?.rpcUrls.default.http[0],
+          };
+        case CHAINS[ChainId.WP_BUDOKAN].chain:
+          return {
+            nodeUrl: CHAINS[ChainId.WP_BUDOKAN].chain?.rpcUrls.default.http[0],
+          };
+        default:
+          throw new Error(`Unsupported chain: ${chain.network}`);
+      }
+    },
+  });
 
+  // Initialize predeployed accounts for Katana
   useEffect(() => {
-    if (selectedChainId === ChainId.KATANA_LOCAL) {
-      predeployedAccounts({
-        rpc: selectedChainConfig?.rpcUrl as string,
-        id: "katana",
-        name: "Katana",
-      }).then(setPa);
+    if (defaultChainId === ChainId.KATANA_LOCAL) {
+      const rpcUrl = CHAINS[defaultChainId]?.chain?.rpcUrls.default.http[0];
+      if (rpcUrl) {
+        predeployedAccounts({
+          rpc: rpcUrl,
+          id: "katana",
+          name: "Katana",
+        }).then(setPredeployedConnectors);
+      }
     }
-  }, [selectedChainConfig?.rpcUrl]);
+  }, [defaultChainId]);
+
+  // Prepare chains based on environment
+  const chains = useMemo(() => {
+    if (defaultChainId === ChainId.KATANA_LOCAL) {
+      return [CHAINS[ChainId.KATANA_LOCAL].chain!];
+    }
+
+    return Object.values(CHAINS)
+      .map((chain) => chain.chain!)
+      .filter(Boolean); // Filter out any undefined chains
+  }, [defaultChainId]);
+
+  // Combine all available connectors
+  const connectors = useMemo(() => {
+    const availableConnectors = [];
+
+    if (controller) {
+      availableConnectors.push(controller);
+    }
+
+    return [...availableConnectors, ...predeployedConnectors].filter(Boolean);
+  }, [predeployedConnectors]);
+
+  // Get default provider chain
+  const defaultChain = CHAINS[defaultChainId]?.chain;
+
+  if (!defaultChain) {
+    console.error(`No chain configuration found for ${defaultChainId}`);
+    return null;
+  }
 
   return (
-    <StarknetConfig
-      autoConnect
-      chains={chains}
-      connectors={[...chainConnectors, ...pa]}
-      provider={() => provider(selectedChainConfig?.chain!)}
-    >
+    <StarknetConfig chains={chains} connectors={connectors} provider={provider}>
       {children}
     </StarknetConfig>
   );

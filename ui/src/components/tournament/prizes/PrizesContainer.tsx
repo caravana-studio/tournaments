@@ -1,4 +1,4 @@
-import { TROPHY } from "@/components/Icons";
+import { QUESTION, TROPHY } from "@/components/Icons";
 import { Card } from "@/components/ui/card";
 import PrizeDisplay from "@/components/tournament/prizes/Prize";
 import { useState, useEffect } from "react";
@@ -15,6 +15,7 @@ interface PrizesContainerProps {
   totalPrizeNFTs: number;
   prices: TokenPrices;
   pricesLoading: boolean;
+  allPricesFound: boolean;
 }
 
 const PrizesContainer = ({
@@ -25,6 +26,7 @@ const PrizesContainer = ({
   totalPrizeNFTs,
   prices,
   pricesLoading,
+  allPricesFound,
 }: PrizesContainerProps) => {
   const [showPrizes, setShowPrizes] = useState(false);
 
@@ -40,20 +42,28 @@ const PrizesContainer = ({
       }`}
     >
       <div className="flex flex-col">
-        <div className="flex flex-row justify-between h-8">
+        <div className="flex flex-row justify-between h-6 sm:h-8 3xl:h-10">
           <div className="flex flex-row items-center gap-2">
-            <span className="font-astronaut text-2xl">Prizes</span>
+            <span className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
+              Prizes
+            </span>
             {pricesLoading ? (
-              <Skeleton className="h-6 w-24 bg-retro-green/10" />
+              <Skeleton className="h-6 w-24 bg-brand/10" />
             ) : (
               <>
-                {totalPrizesValueUSD > 0 && (
-                  <span className="font-astronaut text-xl text-retro-green-dark">
-                    ${totalPrizesValueUSD.toFixed(2)}
+                {allPricesFound ? (
+                  totalPrizesValueUSD > 0 && (
+                    <span className="font-brand text-md xl:text-lg 2xl:text-xl 3xl:text-2xl text-brand-muted">
+                      ${totalPrizesValueUSD.toFixed(2)}
+                    </span>
+                  )
+                ) : (
+                  <span className="w-8">
+                    <QUESTION />
                   </span>
                 )}
                 {totalPrizeNFTs > 0 && (
-                  <span className="font-astronaut text-xl text-retro-green-dark">
+                  <span className="font-brand text-xl text-brand-muted">
                     {totalPrizeNFTs} NFT{totalPrizeNFTs === 1 ? "" : "s"}
                   </span>
                 )}
@@ -63,16 +73,16 @@ const PrizesContainer = ({
           <div className="flex flex-row items-center gap-2">
             {prizesExist ? (
               <>
-                <span className="text-neutral-500">
+                <span className="text-sm xl:text-base 3xl:text-lg text-neutral">
                   {showPrizes ? "Hide" : "Show Prizes"}
                 </span>
                 <Switch checked={showPrizes} onCheckedChange={setShowPrizes} />
               </>
             ) : (
-              <span className="text-neutral-500">No Prizes Added</span>
+              <span className="text-neutral">No Prizes Added</span>
             )}
-            <div className="flex flex-row items-center font-astronaut text-2xl">
-              <span className="w-8">
+            <div className="flex flex-row items-center font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
+              <span className="w-6 xl:w-8 3xl:w-10">
                 <TROPHY />
               </span>
               : {lowestPrizePosition}
@@ -84,18 +94,18 @@ const PrizesContainer = ({
             showPrizes ? "h-auto opacity-100" : "h-0 opacity-0"
           } overflow-hidden`}
         >
-          <div className="w-full h-0.5 bg-retro-green/25 mt-2" />
-          <div className="p-4">
+          <div className="w-full h-0.5 bg-brand/25 mt-2" />
+          <div className="p-2 sm:p-4">
             {prizesExist && (
-              <div className="flex flex-row gap-3 overflow-x-auto">
+              <div className="flex flex-row gap-3 overflow-x-auto pb-2">
                 {pricesLoading ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <div
                       key={index}
-                      className="flex items-center gap-4 p-3 rounded-lg border border-retro-green/20 w-fit hover:cursor-pointer"
+                      className="flex items-center gap-4 p-3 rounded-lg border border-brand/20 w-fit hover:cursor-pointer"
                     >
                       <Skeleton className="h-12 w-12 rounded-full" />
-                      <Skeleton className="h-6 w-full bg-retro-green/10" />
+                      <Skeleton className="h-6 w-full bg-brand/10" />
                     </div>
                   ))
                 ) : (

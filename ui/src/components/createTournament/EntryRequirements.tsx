@@ -17,7 +17,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { StepProps } from "@/containers/CreateTournament";
 import { TROPHY, USER, X } from "@/components/Icons";
 import { displayAddress, feltToString } from "@/lib/utils";
@@ -48,6 +47,11 @@ import {
 import useUIStore from "@/hooks/useUIStore";
 // import { useEkuboPrices } from "@/hooks/useEkuboPrices";
 // import { tokens } from "@/lib/tokensMeta";
+import { OptionalSection } from "@/components/createTournament/containers/OptionalSection";
+import { getChecksumAddress, validateChecksumAddress } from "starknet";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 
 const EntryRequirements = ({ form }: StepProps) => {
   const { nameSpace } = useDojo();
@@ -57,6 +61,15 @@ const EntryRequirements = ({ form }: StepProps) => {
   const [gameFilters, setGameFilters] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const { gameData } = useUIStore();
+  const [addressError, setAddressError] = useState("");
+
+  const ENTRY_LIMIT_OPTIONS = [
+    { value: 1, label: "1" },
+    { value: 2, label: "2" },
+    { value: 3, label: "3" },
+    { value: 5, label: "5" },
+    { value: 10, label: "10" },
+  ];
 
   const { data: tournaments } = useGetTournaments({
     namespace: nameSpace,
@@ -111,72 +124,160 @@ const EntryRequirements = ({ form }: StepProps) => {
       control={form.control}
       name="enableGating"
       render={({ field }) => (
-        <FormItem className="flex flex-col p-4">
-          <div className="flex flex-row items-center justify-between">
-            <div className="flex flex-row items-center gap-5">
-              <FormLabel className="text-2xl font-astronaut">
-                Entry Requirements
-              </FormLabel>
-              <FormDescription>
-                Enable participation restrictions
-              </FormDescription>
-            </div>
-            <FormControl>
-              <div className="flex flex-row items-center gap-2">
-                <span className="uppercase text-neutral-500 font-bold">
-                  Optional
-                </span>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </div>
-            </FormControl>
-          </div>
+        <FormItem className="flex flex-col sm:p-4">
+          <OptionalSection
+            label="Entry Requirements"
+            description="Enable participation restrictions"
+            checked={field.value}
+            onCheckedChange={field.onChange}
+          />
 
           {field.value && (
             <>
-              <div className="w-full h-0.5 bg-retro-green/25" />
+              <div className="w-full h-0.5 bg-brand/25" />
               <div className="space-y-4 p-4">
-                <div className="flex gap-4">
-                  <Button
-                    type="button"
-                    variant={
-                      form.watch("gatingOptions.type") === "token"
-                        ? "default"
-                        : "outline"
-                    }
-                    onClick={() => handleGatingTypeChange("token")}
-                  >
-                    Token Gating
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={
-                      form.watch("gatingOptions.type") === "tournament"
-                        ? "default"
-                        : "outline"
-                    }
-                    onClick={() => handleGatingTypeChange("tournament")}
-                  >
-                    Tournaments
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={
-                      form.watch("gatingOptions.type") === "addresses"
-                        ? "default"
-                        : "outline"
-                    }
-                    onClick={() => handleGatingTypeChange("addresses")}
-                  >
-                    Whitelisted Addresses
-                  </Button>
+                <div className="flex flex-col sm:flex-row gap-4 sm:h-24">
+                  <div className="flex flex-col gap-4 sm:w-1/2">
+                    <div className="flex flex-row items-center gap-5">
+                      <FormLabel className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
+                        Requirement Type
+                      </FormLabel>
+                      <FormDescription className="hidden sm:block">
+                        Choose the requirement type for the tournament
+                      </FormDescription>
+                    </div>
+                    <div className="flex gap-4">
+                      <Button
+                        type="button"
+                        variant={
+                          form.watch("gatingOptions.type") === "token"
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => handleGatingTypeChange("token")}
+                      >
+                        Token
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={
+                          form.watch("gatingOptions.type") === "tournament"
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => handleGatingTypeChange("tournament")}
+                      >
+                        Tournaments
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={
+                          form.watch("gatingOptions.type") === "addresses"
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => handleGatingTypeChange("addresses")}
+                      >
+                        Whitelist{" "}
+                        <span className="hidden sm:inline">Addresses</span>
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="hidden sm:block w-0.5 h-full bg-brand/25" />
+                  <div className="sm:hidden w-full h-0.5 bg-brand/25" />
+                  <FormField
+                    control={form.control}
+                    name="enableEntryLimit"
+                    render={({ field }) => (
+                      <FormItem className="space-y-0 flex flex-col gap-4 sm:w-1/2">
+                        <div className="flex flex-col">
+                          <div className="flex flex-row justify-between">
+                            <div className="flex flex-row items-center gap-5">
+                              <FormLabel className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
+                                Entry Limit
+                              </FormLabel>
+                              <FormDescription className="hidden sm:block">
+                                Set an entry limit for the tournament
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <div className="flex flex-row items-center gap-2">
+                                <span className="uppercase text-neutral text-xs font-bold">
+                                  Optional
+                                </span>
+                                <Switch
+                                  size="sm"
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </div>
+                            </FormControl>
+                          </div>
+                        </div>
+                        {field.value && (
+                          <FormField
+                            control={form.control}
+                            name="gatingOptions.entry_limit"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="flex flex-col sm:flex-row items-center gap-5">
+                                    <div
+                                      className={`flex flex-row items-center justify-center sm:justify-start gap-2 sm:w-1/2`}
+                                    >
+                                      {ENTRY_LIMIT_OPTIONS.map(
+                                        ({ value, label }) => (
+                                          <Button
+                                            key={value}
+                                            type="button"
+                                            variant={
+                                              field.value === value
+                                                ? "default"
+                                                : "outline"
+                                            }
+                                            className="px-2 w-10 h-10 flex items-center justify-center"
+                                            onClick={() => {
+                                              field.onChange(value);
+                                            }}
+                                          >
+                                            {label}
+                                          </Button>
+                                        )
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col gap-2 w-1/2">
+                                      <div className="flex justify-between items-center">
+                                        <Label className="xl:text-xs 2xl:text-lg">
+                                          Entries
+                                        </Label>
+                                        <span className="text-sm text-muted-foreground text-xl">
+                                          {field.value ?? 0}
+                                        </span>
+                                      </div>
+                                      <Slider
+                                        value={[field.value ?? 0]}
+                                        onValueChange={([entries]) => {
+                                          field.onChange(entries);
+                                        }}
+                                        max={100}
+                                        min={1}
+                                        step={1}
+                                      />
+                                    </div>
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 {form.watch("gatingOptions.type") === "token" && (
                   <>
-                    <div className="w-full h-0.5 bg-retro-green/25" />
+                    <div className="w-full h-0.5 bg-brand/25" />
                     <div className="flex flex-row items-center gap-5">
                       <FormField
                         control={form.control}
@@ -191,6 +292,7 @@ const EntryRequirements = ({ form }: StepProps) => {
                                     setSelectedToken(token);
                                     field.onChange(token.address);
                                   }}
+                                  type="erc721"
                                 />
                               </div>
                             </FormControl>
@@ -204,7 +306,7 @@ const EntryRequirements = ({ form }: StepProps) => {
 
                 {form.watch("gatingOptions.type") === "tournament" && (
                   <>
-                    <div className="w-full h-0.5 bg-retro-green/25" />
+                    <div className="w-full h-0.5 bg-brand/25" />
                     <div className="space-y-4">
                       <FormField
                         control={form.control}
@@ -212,10 +314,10 @@ const EntryRequirements = ({ form }: StepProps) => {
                         render={({ field }) => (
                           <FormItem>
                             <div className="flex flex-row items-center gap-5">
-                              <FormLabel className="font-astronaut text-2xl">
+                              <FormLabel className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
                                 Requirement
                               </FormLabel>
-                              <FormDescription>
+                              <FormDescription className="hidden sm:block">
                                 Choose whether previous tournaments must have
                                 been won or only participated in
                               </FormDescription>
@@ -249,14 +351,14 @@ const EntryRequirements = ({ form }: StepProps) => {
                           </FormItem>
                         )}
                       />
-                      <div className="w-full h-0.5 bg-retro-green/25" />
+                      <div className="w-full h-0.5 bg-brand/25" />
                       <FormField
                         control={form.control}
                         name="gatingOptions.tournament.tournaments"
                         render={({ field }) => (
                           <FormItem>
                             <div className="flex flex-row items-center gap-5">
-                              <FormLabel className="font-astronaut text-2xl">
+                              <FormLabel className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
                                 Tournaments
                               </FormLabel>
                               <FormDescription>Add tournaments</FormDescription>
@@ -269,7 +371,7 @@ const EntryRequirements = ({ form }: StepProps) => {
                                       return (
                                         <div
                                           key={selectedTournament.id}
-                                          className="inline-flex items-center gap-2 p-2 border border-retro-green-dark rounded w-fit"
+                                          className="inline-flex items-center gap-2 p-2 border border-brand-muted rounded w-fit"
                                         >
                                           <span>
                                             {feltToString(
@@ -324,7 +426,7 @@ const EntryRequirements = ({ form }: StepProps) => {
                                       </DialogTitle>
                                       {/* Search input */}
                                       <div className="px-4 pb-2 flex flex-col gap-2">
-                                        <div className="flex items-center border rounded border-retro-green-dark bg-background">
+                                        <div className="flex items-center border rounded border-brand-muted bg-background">
                                           <Search className="w-4 h-4 ml-3 text-muted-foreground" />
                                           <Input
                                             placeholder="Search tournaments..."
@@ -345,9 +447,9 @@ const EntryRequirements = ({ form }: StepProps) => {
                                                 gameFilters.includes(
                                                   game.contract_address
                                                 )
-                                                  ? "bg-retro-green-dark text-black"
+                                                  ? "bg-brand-muted text-black"
                                                   : "bg-black"
-                                              } border border-neutral-500 px-2 flex items-center gap-2 cursor-pointer`}
+                                              } border border-brand-muted px-2 flex items-center gap-2 cursor-pointer`}
                                               onClick={() => {
                                                 if (
                                                   gameFilters.includes(
@@ -383,7 +485,7 @@ const EntryRequirements = ({ form }: StepProps) => {
                                     </DialogHeader>
 
                                     {/* Tournament list */}
-                                    <div className="flex-1 overflow-y-auto border-t border-retro-green-dark">
+                                    <div className="flex-1 overflow-y-auto border-t border-brand-muted">
                                       {tournamentsData?.length > 0 ? (
                                         tournamentsData.map(
                                           (tournament, index) => {
@@ -435,85 +537,97 @@ const EntryRequirements = ({ form }: StepProps) => {
                                             // const groupedPrizes = groupPrizesByTokens(allPrizes, tokens);
 
                                             // const totalPrizesValueUSD = calculateTotalValue(groupedPrizes, prices);
-                                            return (
-                                              <DialogClose asChild key={index}>
-                                                <div
-                                                  className="flex flex-row items-center justify-between border-b border-retro-green-dark px-4 py-2 hover:bg-retro-green/20 hover:cursor-pointer"
-                                                  onClick={() => {
-                                                    if (
-                                                      !(
-                                                        field.value || []
-                                                      ).includes(
-                                                        tournament.tournament
-                                                      )
-                                                    ) {
-                                                      field.onChange([
-                                                        ...(field.value || []),
-                                                        tournament.tournament,
-                                                      ]);
-                                                    }
-                                                  }}
-                                                >
-                                                  <div className="flex flex-row items-center gap-2">
-                                                    <span className="font-astronaut">
-                                                      {feltToString(
-                                                        tournament.tournament
-                                                          .metadata.name
-                                                      )}
-                                                    </span>
-                                                    -
-                                                    <span className="font-astronaut">
-                                                      #
-                                                      {Number(
-                                                        tournament.tournament.id
-                                                      ).toString()}
-                                                    </span>
-                                                  </div>
-                                                  <span className="font-astronaut">
-                                                    {status}
-                                                  </span>
-                                                  <div className="flex flex-row">
-                                                    <span className="w-6 h-6">
-                                                      <USER />
-                                                    </span>
-                                                    {tournament.entryCount}
-                                                  </div>
-                                                  <div className="relative group flex items-center justify-center">
-                                                    <Tooltip delayDuration={50}>
-                                                      <TooltipTrigger asChild>
-                                                        <div className="flex items-center justify-center">
-                                                          <TokenGameIcon
-                                                            size="sm"
-                                                            game={
-                                                              tournament
-                                                                .tournament
-                                                                .game_config
-                                                                .address
-                                                            }
-                                                          />
-                                                        </div>
-                                                      </TooltipTrigger>
-                                                      <TooltipContent
-                                                        side="top"
-                                                        className="bg-black text-neutral-500 border border-retro-green-dark px-2 py-1 rounded text-sm"
-                                                      >
-                                                        {name
-                                                          ? feltToString(name)
-                                                          : "Unknown"}
-                                                      </TooltipContent>
-                                                    </Tooltip>
-                                                  </div>
-                                                  {/* <div>${tournament.pot}</div> */}
-                                                  <div className="flex flex-row items-center">
-                                                    <span className="w-5 h-5">
-                                                      <TROPHY />
-                                                    </span>
-                                                    {Number(
+                                            const beenSelected = (
+                                              field.value || []
+                                            ).some(
+                                              (element) =>
+                                                element.id ===
+                                                tournament.tournament.id
+                                            );
+                                            const content = (
+                                              <div
+                                                key={index}
+                                                className={`flex flex-row items-center justify-between border-b border-brand-muted ${
+                                                  beenSelected
+                                                    ? "bg-brand/70 text-black"
+                                                    : "bg-background hover:bg-brand/20"
+                                                } px-4 py-2 hover:cursor-pointer`}
+                                                onClick={() => {
+                                                  if (!beenSelected) {
+                                                    field.onChange([
+                                                      ...(field.value || []),
+                                                      tournament.tournament,
+                                                    ]);
+                                                  }
+                                                }}
+                                              >
+                                                <div className="flex flex-row items-center gap-2">
+                                                  <span className="font-brand">
+                                                    {feltToString(
                                                       tournament.tournament
-                                                        .game_config.prize_spots
+                                                        .metadata.name
+                                                    )}
+                                                  </span>
+                                                  -
+                                                  <span className="font-brand">
+                                                    #
+                                                    {Number(
+                                                      tournament.tournament.id
                                                     ).toString()}
-                                                  </div>
+                                                  </span>
                                                 </div>
+                                                <span className="font-brand">
+                                                  {status}
+                                                </span>
+                                                <div className="flex flex-row">
+                                                  <span className="w-6 h-6">
+                                                    <USER />
+                                                  </span>
+                                                  {tournament.entryCount}
+                                                </div>
+                                                <div className="relative group flex items-center justify-center">
+                                                  <Tooltip delayDuration={50}>
+                                                    <TooltipTrigger asChild>
+                                                      <div className="flex items-center justify-center">
+                                                        <TokenGameIcon
+                                                          size="sm"
+                                                          game={
+                                                            tournament
+                                                              .tournament
+                                                              .game_config
+                                                              .address
+                                                          }
+                                                        />
+                                                      </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent
+                                                      side="top"
+                                                      className="bg-black text-neutral border border-brand-muted px-2 py-1 rounded text-sm"
+                                                    >
+                                                      {name
+                                                        ? feltToString(name)
+                                                        : "Unknown"}
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                </div>
+                                                {/* <div>${tournament.pot}</div> */}
+                                                <div className="flex flex-row items-center">
+                                                  <span className="w-5 h-5">
+                                                    <TROPHY />
+                                                  </span>
+                                                  {Number(
+                                                    tournament.tournament
+                                                      .game_config.prize_spots
+                                                  ).toString()}
+                                                </div>
+                                              </div>
+                                            );
+
+                                            return beenSelected ? (
+                                              content
+                                            ) : (
+                                              <DialogClose asChild key={index}>
+                                                {content}
                                               </DialogClose>
                                             );
                                           }
@@ -546,7 +660,7 @@ const EntryRequirements = ({ form }: StepProps) => {
 
                 {form.watch("gatingOptions.type") === "addresses" && (
                   <>
-                    <div className="w-full h-0.5 bg-retro-green/25" />
+                    <div className="w-full h-0.5 bg-brand/25" />
                     <div className="space-y-4">
                       <FormField
                         control={form.control}
@@ -554,13 +668,20 @@ const EntryRequirements = ({ form }: StepProps) => {
                         render={({ field }) => (
                           <FormItem>
                             <div className="flex flex-row items-center gap-2">
-                              <FormLabel className="font-astronaut text-2xl">
+                              <FormLabel className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
                                 Whitelisted Addresses
                               </FormLabel>
-                              <FormDescription>
-                                Add addresses that are allowed to participate in
-                                the tournament
-                              </FormDescription>
+                              <div className="flex flex-row items-center gap-2">
+                                <FormDescription className="hidden sm:block">
+                                  Add addresses that are allowed to participate
+                                  in the tournament
+                                </FormDescription>
+                                {addressError && (
+                                  <span className="text-red-500 text-sm">
+                                    {addressError}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <FormControl>
                               <div className="flex flex-col gap-5">
@@ -576,11 +697,68 @@ const EntryRequirements = ({ form }: StepProps) => {
                                     type="button"
                                     onClick={() => {
                                       if (newAddress) {
-                                        field.onChange([
-                                          ...field.value,
-                                          newAddress,
-                                        ]);
-                                        setNewAddress("");
+                                        // Split by comma and trim whitespace
+                                        const addresses = newAddress
+                                          .split(",")
+                                          .map((addr) =>
+                                            getChecksumAddress(addr.trim())
+                                          )
+                                          .filter((addr) => addr.length > 0);
+
+                                        // Validate each address and track invalid ones
+                                        const validAddresses: string[] = [];
+                                        const invalidAddresses: string[] = [];
+                                        const duplicateAddresses: string[] = [];
+
+                                        addresses.forEach((addr) => {
+                                          try {
+                                            // Check if address is already in the list
+                                            if (field.value.includes(addr)) {
+                                              duplicateAddresses.push(
+                                                displayAddress(addr)
+                                              );
+                                            }
+                                            // Validate the address
+                                            else if (
+                                              validateChecksumAddress(addr)
+                                            ) {
+                                              validAddresses.push(addr);
+                                            } else {
+                                              invalidAddresses.push(addr);
+                                            }
+                                          } catch (e) {
+                                            invalidAddresses.push(addr);
+                                          }
+                                        });
+
+                                        // Construct error message
+                                        let errorMessage = "";
+                                        if (invalidAddresses.length > 0) {
+                                          errorMessage += `Invalid addresses: ${invalidAddresses.join(
+                                            ", "
+                                          )}`;
+                                        }
+                                        if (duplicateAddresses.length > 0) {
+                                          if (errorMessage)
+                                            errorMessage += ". ";
+                                          errorMessage += `Duplicate addresses: ${duplicateAddresses.join(
+                                            ", "
+                                          )}`;
+                                        }
+
+                                        if (validAddresses.length > 0) {
+                                          field.onChange([
+                                            ...field.value,
+                                            ...validAddresses,
+                                          ]);
+                                          setNewAddress("");
+                                          setAddressError(errorMessage);
+                                        } else {
+                                          setAddressError(
+                                            errorMessage ||
+                                              "No valid addresses found"
+                                          );
+                                        }
                                       }
                                     }}
                                   >
@@ -589,12 +767,12 @@ const EntryRequirements = ({ form }: StepProps) => {
                                 </div>
                                 {field.value.length > 0 && (
                                   <>
-                                    <div className="w-full h-0.5 bg-retro-green/25" />
+                                    <div className="w-full h-0.5 bg-brand/25" />
                                     <div className="flex flex-row gap-2 overflow-x-auto">
                                       {field.value.map((address, index) => (
                                         <div
                                           key={index}
-                                          className="flex items-center justify-between p-2 border border-neutral-500 rounded w-fit"
+                                          className="flex items-center justify-between p-2 border border-neutral rounded w-fit"
                                         >
                                           <span className="truncate">
                                             {displayAddress(address)}

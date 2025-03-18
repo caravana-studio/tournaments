@@ -1,9 +1,8 @@
 import { Connector } from "@starknet-react/core";
 import { ControllerConnector } from "@cartridge/connector";
-import { DojoManifest } from "@/dojo/hooks/useDojoSystem";
-import { ChainId } from "@/dojo/config";
 import { stringToFelt } from "@/lib/utils";
-import { SessionPolicies } from "@cartridge/controller";
+import { DojoManifest } from "../hooks/useDojoSystem";
+import { SessionPolicies } from "@cartridge/presets";
 
 const exclusions = ["dojo_init", "upgrade"];
 
@@ -34,19 +33,21 @@ const _makeControllerPolicies = (manifest: DojoManifest): SessionPolicies => {
 };
 
 export const initializeController = (
-  manifest: DojoManifest,
-  rpcUrl: string,
-  defaultChainId: string
+  chainRpcUrls: { rpcUrl: string }[],
+  defaultChainId: string,
+  manifest: DojoManifest
 ): Connector => {
   const policies = _makeControllerPolicies(manifest);
-
   return new ControllerConnector({
-    chains: [{ rpcUrl: rpcUrl }],
+    chains: chainRpcUrls,
     defaultChainId: stringToFelt(defaultChainId).toString(),
-    theme: "loot-survivor",
-    colorMode: "dark",
+    preset: "budokan",
+    slot: "pg-mainnet-tokens",
+    tokens: {
+      erc20: [
+        "0x0124aeb495b947201f5fac96fd1138e326ad86195b98df6dec9009158a533b49",
+      ],
+    },
     policies,
-    slot:
-      defaultChainId == ChainId.SN_MAIN ? "tournament-tokens" : "tournaments",
   }) as never as Connector;
 };

@@ -8,6 +8,7 @@ import { feltToString } from "@/lib/utils";
 import { TokenMetadata } from "@/generated/models.gen";
 import { BigNumberish } from "starknet";
 import { Button } from "@/components/ui/button";
+import { getGameName, getGameUrl } from "@/assets/games";
 
 interface EntryCardProps {
   gameAddress: string;
@@ -29,6 +30,14 @@ const EntryCard = ({ gameAddress, mergedEntry }: EntryCardProps) => {
     !!mergedEntry.gameMetadata?.lifecycle.start.Some &&
     BigInt(mergedEntry.gameMetadata?.lifecycle.start.Some) < currentDate;
 
+  const gameUrl = getGameUrl(gameAddress);
+
+  const gameName = getGameName(gameAddress);
+
+  if (!mergedEntry.entry_number) {
+    return null;
+  }
+
   return (
     <Card
       variant="outline"
@@ -40,7 +49,7 @@ const EntryCard = ({ gameAddress, mergedEntry }: EntryCardProps) => {
       </div>
       <HoverCard openDelay={50} closeDelay={0}>
         <HoverCardTrigger asChild>
-          <div className="absolute top-0 right-0 text-retro-green-dark hover:cursor-pointer w-5 h-5 z-20">
+          <div className="absolute top-0 right-0 text-brand-muted hover:cursor-pointer w-5 h-5 z-20">
             <INFO />
           </div>
         </HoverCardTrigger>
@@ -49,7 +58,7 @@ const EntryCard = ({ gameAddress, mergedEntry }: EntryCardProps) => {
           tokenMetadata={mergedEntry.tokenMetadata ?? ""}
         />
       </HoverCard>
-      <p className="text-xs overflow-x-hidden text-ellipsis whitespace-nowrap text-retro-green-dark">
+      <p className="text-xs overflow-x-hidden text-ellipsis whitespace-nowrap text-brand-muted">
         {feltToString(mergedEntry.gameMetadata?.player_name ?? "")}
       </p>
       {isActive && (
@@ -57,7 +66,14 @@ const EntryCard = ({ gameAddress, mergedEntry }: EntryCardProps) => {
           <Button
             size="sm"
             onClick={() => {
-              console.log("Play clicked for entry:", mergedEntry.entry_number);
+              window.open(
+                gameName === "Dark Shuffle"
+                  ? `https://darkshuffle.io/play/${Number(
+                      mergedEntry.game_token_id
+                    )}`
+                  : gameUrl,
+                "_blank"
+              );
             }}
           >
             PLAY
@@ -67,12 +83,12 @@ const EntryCard = ({ gameAddress, mergedEntry }: EntryCardProps) => {
       <div className="absolute flex flex-row items-center justify-between bottom-1 w-full px-2">
         {isActive ? (
           <>
-            <p className="text-[10px] text-neutral-500">Score:</p>
-            <p className="text-xs text-retro-green">{mergedEntry.score}</p>
+            <p className="text-[10px] text-neutral">Score:</p>
+            <p className="text-xs text-brand">{mergedEntry.score}</p>
           </>
         ) : (
           <>
-            <p className="text-xs text-neutral-500">Not Active</p>
+            <p className="text-xs text-neutral">Not Active</p>
           </>
         )}
       </div>

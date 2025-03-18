@@ -1,6 +1,5 @@
 import { Card } from "@/components/ui/card";
 import { DOLLAR } from "@/components/Icons";
-import { useGetAccountTokenIds } from "@/dojo/hooks/useSqlQueries";
 import {
   useGetGameMetadataInListQuery,
   useGetRegistrationsForTournamentInTokenListQuery,
@@ -14,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import EntryCard from "@/components/tournament/myEntries/EntryCard";
 import { TokenMetadata } from "@/generated/models.gen";
 import { useDojoStore } from "@/dojo/hooks/useDojoStore";
+import { useDojo } from "@/context/dojo";
 
 interface MyEntriesProps {
   tournamentId: BigNumberish;
@@ -21,6 +21,7 @@ interface MyEntriesProps {
   gameNamespace: string;
   gameScoreModel: string;
   gameScoreAttribute: string;
+  ownedTokens: any[];
 }
 
 const MyEntries = ({
@@ -29,26 +30,12 @@ const MyEntries = ({
   gameNamespace,
   gameScoreModel,
   gameScoreAttribute,
+  ownedTokens,
 }: MyEntriesProps) => {
   const { address } = useAccount();
-  const state = useDojoStore.getState();
+  const state = useDojoStore((state) => state);
+  const { nameSpace } = useDojo();
   const [showMyEntries, setShowMyEntries] = useState(false);
-
-  const queryAddress = useMemo(() => {
-    if (!address || address === "0x0") return null;
-    return indexAddress(address);
-  }, [address]);
-
-  const queryGameAddress = useMemo(() => {
-    if (!gameAddress || gameAddress === "0x0") return null;
-    return indexAddress(gameAddress);
-  }, [gameAddress]);
-
-  const { data: ownedTokens } = useGetAccountTokenIds(queryAddress, [
-    queryGameAddress ?? "0x0",
-  ]);
-
-  console.log(ownedTokens);
 
   const ownedTokenIds = useMemo(() => {
     return ownedTokens
@@ -59,13 +46,20 @@ const MyEntries = ({
       .filter(Boolean);
   }, [ownedTokens]);
 
-  const { entities: myRegistrations } =
-    useGetRegistrationsForTournamentInTokenListQuery({
-      tournamentId: addAddressPadding(bigintToHex(tournamentId)),
-      tokenIds: ownedTokenIds ?? [],
-      limit: 1000,
-      offset: 0,
-    });
+  useGetRegistrationsForTournamentInTokenListQuery({
+    tournamentId: addAddressPadding(bigintToHex(tournamentId)),
+    tokenIds: ownedTokenIds ?? [],
+    limit: 1000,
+    offset: 0,
+  });
+
+  const myRegistrations = state
+    .getEntitiesByModel(nameSpace ?? "", "Registration")
+    .filter(
+      (entity) =>
+        entity.models[nameSpace ?? ""].Registration?.tournament_id ===
+        tournamentId
+    );
 
   const myEntriesCount = useMemo(() => {
     return myRegistrations?.length ?? 0;
@@ -75,7 +69,10 @@ const MyEntries = ({
     () =>
       myRegistrations?.map((registration) =>
         addAddressPadding(
-          bigintToHex(registration?.Registration?.game_token_id ?? 0n)
+          bigintToHex(
+            registration?.models[nameSpace ?? ""].Registration?.game_token_id ??
+              0n
+          )
         )
       ),
     [myRegistrations]
@@ -96,7 +93,8 @@ const MyEntries = ({
     if (!myRegistrations || !metadata) return [];
 
     return myRegistrations.map((registration) => {
-      const gameTokenId = registration?.Registration?.game_token_id ?? 0n;
+      const gameTokenId =
+        registration?.models[nameSpace ?? ""].Registration?.game_token_id ?? 0n;
 
       // Find matching metadata for this token
       const gameMetadata = metadata.find(
@@ -120,7 +118,7 @@ const MyEntries = ({
       )?.metadata;
 
       return {
-        ...registration.Registration,
+        ...registration.models[nameSpace ?? ""].Registration,
         gameMetadata: gameMetadata?.TokenMetadata as TokenMetadata | null,
         tokenMetadata: tokenMetadata as string | null,
         score:
@@ -142,18 +140,20 @@ const MyEntries = ({
   return (
     <Card
       variant="outline"
-      className={`w-1/2 transition-all duration-300 ease-in-out ${
-        showMyEntries ? "h-[200px]" : "h-[60px]"
+      className={`sm:w-1/2 transition-all duration-300 ease-in-out ${
+        showMyEntries ? "h-[210px] 3xl:h-[270px]" : "h-[60px] 3xl:h-[80px]"
       }`}
     >
       <div className="flex flex-col justify-between">
-        <div className="flex flex-row justify-between h-8">
-          <span className="font-astronaut text-2xl">My Entries</span>
+        <div className="flex flex-row items-center justify-between h-6 sm:h-8">
+          <span className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
+            My Entries
+          </span>
           <div className="flex flex-row items-center gap-2">
             {address ? (
               myEntriesCount > 0 ? (
                 <>
-                  <span className="text-neutral-500">
+                  <span className="text-neutral 3xl:text-lg">
                     {showMyEntries ? "Hide" : "Show Entries"}
                   </span>
                   <Switch
@@ -162,13 +162,15 @@ const MyEntries = ({
                   />
                 </>
               ) : (
-                <span className="text-neutral-500">No Entries</span>
+                <span className="text-neutral 3xl:text-lg">No Entries</span>
               )
             ) : (
-              <span className="text-neutral-500">No Account Connected</span>
+              <span className="text-neutral 3xl:text-lg">
+                No Account Connected
+              </span>
             )}
-            <div className="flex flex-row items-center font-astronaut text-2xl">
-              <span className="w-8">
+            <div className="flex flex-row items-center font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
+              <span className="w-8 3xl:w-10">
                 <DOLLAR />
               </span>
               : {myEntriesCount}
@@ -180,9 +182,9 @@ const MyEntries = ({
             showMyEntries ? "h-auto opacity-100" : "h-0 opacity-0"
           } overflow-hidden`}
         >
-          <div className="w-full h-0.5 bg-retro-green/25 mt-2" />
+          <div className="w-full h-0.5 bg-brand/25 mt-2" />
           <div className="p-2 h-auto">
-            <div className="flex flex-row gap-5 overflow-x-auto">
+            <div className="flex flex-row gap-5 overflow-x-auto pb-2">
               {mergedEntries?.map((mergedEntry, index) => (
                 <EntryCard
                   key={index}

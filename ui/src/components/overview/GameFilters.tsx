@@ -6,19 +6,18 @@ import TokenGameIcon from "@/components/icons/TokenGameIcon";
 const GameFilters = () => {
   const { gameFilters, setGameFilters, gameData } = useUIStore();
   return (
-    <div className="flex flex-col gap-4 w-1/5">
+    <div className="hidden sm:flex flex-col gap-4 w-1/5">
       {Object.entries(getGames()).map(([key, game]) => {
         const isDisabled = !gameData.find(
           (game) => game.contract_address === key
         );
         return (
-          <div key={key} className="relative w-full">
+          <div key={key} className="relative w-full max-w-80">
             <Button
               size={"xl"}
               variant="outline"
-              borderColor="rgba(0, 218, 163, 1)"
-              className={`text-2xl font-astronaut w-full ${
-                gameFilters.includes(key) ? "bg-retro-green/25" : ""
+              className={`text-lg px-2 xl:px-4 xl:text-xl 2xl:text-2xl font-brand w-full ${
+                gameFilters.includes(key) ? "bg-brand/25" : ""
               }`}
               onClick={() => {
                 if (gameFilters.includes(key)) {
@@ -34,11 +33,11 @@ const GameFilters = () => {
               disabled={isDisabled}
             >
               <TokenGameIcon game={key} />
-              {game.name}
+              <span className="truncate">{game.name}</span>
             </Button>
             {isDisabled && (
               <div className="absolute top-1 right-2 flex items-center justify-center rounded-md">
-                <span className="text-sm font-astronaut uppercase">
+                <span className="text-sm font-brand uppercase">
                   Coming Soon
                 </span>
               </div>

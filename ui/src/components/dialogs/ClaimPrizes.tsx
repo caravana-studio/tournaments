@@ -9,7 +9,7 @@ import {
 import { useSystemCalls } from "@/dojo/hooks/useSystemCalls";
 import { useAccount } from "@starknet-react/core";
 import { Tournament, PrizeTypeEnum } from "@/generated/models.gen";
-import { feltToString, getOrdinalSuffix } from "@/lib/utils";
+import { feltToString, formatNumber, getOrdinalSuffix } from "@/lib/utils";
 import { useConnectToSelectedChain } from "@/dojo/hooks/useChain";
 import { TokenPrices } from "@/hooks/useEkuboPrices";
 import { getTokenLogoUrl, getTokenSymbol } from "@/lib/tokensMeta";
@@ -60,20 +60,22 @@ export function ClaimPrizesDialog({
                 className="flex flex-row items-center justify-between"
                 key={index}
               >
-                <span className="text-retro-green-dark">
+                <span className="text-brand-muted">
                   {prize.type === "entry_fee_game_creator"
                     ? "Game Creator Share"
                     : prize.type === "entry_fee_tournament_creator"
                     ? "Tournament Creator Share"
-                    : `${getOrdinalSuffix(prize.payout_position)} Place`}
+                    : `${prize.payout_position}${getOrdinalSuffix(
+                        prize.payout_position
+                      )} Place`}
                 </span>
                 <div className="flex flex-row items-center gap-2">
-                  <span>{prizeAmount}</span>
+                  <span>{formatNumber(prizeAmount)}</span>
                   <img
                     src={getTokenLogoUrl(prize.token_address)}
                     className="w-6 h-6"
                   />
-                  <span className="text-neutral-500">
+                  <span className="text-neutral">
                     ~${(prizeAmount * tokenPrice).toFixed(2)}
                   </span>
                 </div>

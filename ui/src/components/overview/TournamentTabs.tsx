@@ -9,6 +9,7 @@ interface TournamentTabsProps {
   upcomingTournamentsCount?: number;
   liveTournamentsCount?: number;
   endedTournamentsCount?: number;
+  myTournamentsCount?: number;
 }
 
 const TournamentTabs = ({
@@ -17,6 +18,7 @@ const TournamentTabs = ({
   upcomingTournamentsCount,
   liveTournamentsCount,
   endedTournamentsCount,
+  myTournamentsCount,
 }: TournamentTabsProps) => {
   return (
     <div className="flex flex-row gap-2">
@@ -25,6 +27,7 @@ const TournamentTabs = ({
         onClick={() => setSelectedTab("upcoming")}
         icon={<GLOBE />}
         label="Upcoming Tournaments"
+        mobileLabel="Upcoming"
         count={upcomingTournamentsCount}
       />
       <TournamentTab
@@ -32,6 +35,7 @@ const TournamentTabs = ({
         onClick={() => setSelectedTab("live")}
         icon={<FLAG />}
         label="Live Tournaments"
+        mobileLabel="Live"
         count={liveTournamentsCount}
       />
       <TournamentTab
@@ -39,14 +43,19 @@ const TournamentTabs = ({
         onClick={() => setSelectedTab("ended")}
         icon={<MINUS />}
         label="Ended Tournaments"
+        mobileLabel="Ended"
         count={endedTournamentsCount}
       />
-      <TournamentTab
-        selected={selectedTab === "my"}
-        onClick={() => setSelectedTab("my")}
-        icon={<TROPHY />}
-        label="My Tournaments"
-      />
+      <div className="hidden sm:block">
+        <TournamentTab
+          selected={selectedTab === "my"}
+          onClick={() => setSelectedTab("my")}
+          icon={<TROPHY />}
+          label="My Tournaments"
+          mobileLabel="My Tournaments"
+          count={myTournamentsCount}
+        />
+      </div>
     </div>
   );
 };

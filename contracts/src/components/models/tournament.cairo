@@ -41,10 +41,33 @@ pub struct EntryFee {
 }
 
 #[derive(Copy, Drop, Serde, PartialEq, Introspect)]
-pub enum EntryRequirement {
+pub struct EntryRequirement {
+    pub entry_limit: Option<u32>,
+    pub entry_requirement_type: EntryRequirementType,
+}
+
+#[derive(Copy, Drop, Serde, PartialEq, Introspect)]
+pub enum EntryRequirementType {
     token: ContractAddress,
     tournament: TournamentType,
     allowlist: Span<ContractAddress>,
+}
+
+#[dojo::model]
+#[derive(Drop, Serde)]
+pub struct QualificationEntries {
+    #[key]
+    pub tournament_id: u64,
+    #[key]
+    pub qualification: Qualification,
+    pub entry_count: u32,
+}
+
+#[derive(Copy, Drop, Serde, PartialEq, Introspect)]
+pub enum Qualification {
+    token: NFTQualification,
+    tournament: TournamentQualification,
+    allowlist: ContractAddress,
 }
 
 #[derive(Copy, Drop, Serde, PartialEq, Introspect)]
@@ -129,6 +152,7 @@ pub struct Prize {
     pub payout_position: u8,
     pub token_address: ContractAddress,
     pub token_type: TokenType,
+    pub sponsor_address: ContractAddress,
 }
 
 //TODO: Remove name and symbol from the model
@@ -175,7 +199,7 @@ pub enum PrizeType {
     Sponsored: u64,
 }
 
-#[derive(Copy, Drop, Serde, PartialEq)]
+#[derive(Copy, Drop, Serde, PartialEq, Introspect)]
 pub enum QualificationProof {
     // For qualifying via previous tournament
     Tournament: TournamentQualification,
@@ -183,14 +207,14 @@ pub enum QualificationProof {
     NFT: NFTQualification,
 }
 
-#[derive(Copy, Drop, Serde, PartialEq)]
+#[derive(Copy, Drop, Serde, PartialEq, Introspect)]
 pub struct TournamentQualification {
     pub tournament_id: u64,
     pub token_id: u64,
-    pub position: u8 // 1-based position in leaderboard
+    pub position: u8,
 }
 
-#[derive(Copy, Drop, Serde, PartialEq)]
+#[derive(Copy, Drop, Serde, PartialEq, Introspect)]
 pub struct NFTQualification {
     pub token_id: u256,
 }

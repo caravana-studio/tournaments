@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x45575a88cc5cef1e444c77ce60b7b4c9e73a01cbbe20926d5a4c72a94011410",
-    "address": "0x2f808e319783173b7a36bae6ab318fb98f6553fce73786b430cc02110483fd4",
+    "class_hash": "0x7c9469d45a9cdbab775035afb48e1fa73fb35ab059fcb9dfb0a301aa973e783",
+    "address": "0x6d7a560b1c63eb397cbbf1b353038d7986275ee6ed15a211c84cb4f62656a4a",
     "seed": "tournaments",
     "name": "Tournament",
     "entrypoints": [
@@ -11,6 +11,7 @@
       "register_event",
       "register_model",
       "register_contract",
+      "register_library",
       "init_contract",
       "upgrade_event",
       "upgrade_model",
@@ -78,6 +79,10 @@
           {
             "name": "Unregistered",
             "type": "()"
+          },
+          {
+            "name": "Library",
+            "type": "(core::starknet::class_hash::ClassHash, core::felt252)"
           }
         ]
       },
@@ -358,6 +363,34 @@
             "outputs": [
               {
                 "type": "core::starknet::contract_address::ContractAddress"
+              }
+            ],
+            "state_mutability": "external"
+          },
+          {
+            "type": "function",
+            "name": "register_library",
+            "inputs": [
+              {
+                "name": "namespace",
+                "type": "core::byte_array::ByteArray"
+              },
+              {
+                "name": "class_hash",
+                "type": "core::starknet::class_hash::ClassHash"
+              },
+              {
+                "name": "name",
+                "type": "core::byte_array::ByteArray"
+              },
+              {
+                "name": "version",
+                "type": "core::byte_array::ByteArray"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::starknet::class_hash::ClassHash"
               }
             ],
             "state_mutability": "external"
@@ -967,6 +1000,28 @@
       },
       {
         "type": "event",
+        "name": "dojo::world::world_contract::world::LibraryRegistered",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "name",
+            "type": "core::byte_array::ByteArray",
+            "kind": "key"
+          },
+          {
+            "name": "namespace",
+            "type": "core::byte_array::ByteArray",
+            "kind": "key"
+          },
+          {
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::world::world_contract::world::EventEmitted",
         "kind": "struct",
         "members": [
@@ -1207,6 +1262,11 @@
             "kind": "nested"
           },
           {
+            "name": "LibraryRegistered",
+            "type": "dojo::world::world_contract::world::LibraryRegistered",
+            "kind": "nested"
+          },
+          {
             "name": "EventEmitted",
             "type": "dojo::world::world_contract::world::EventEmitted",
             "kind": "nested"
@@ -1252,8 +1312,8 @@
   },
   "contracts": [
     {
-      "address": "0x7a16a172e9cd4433cb4f31648507cc14b56deedd2e7852d08bd6651abdc255f",
-      "class_hash": "0x3b6adf92300b027f1d6d3314ec1361b92eb35a5ee60dbf411abfb8007dac30f",
+      "address": "0x18de1b570a6256a0169912cc004027990917e3413e7ba80cc21ce5cc4a1a03b",
+      "class_hash": "0x17a6b66d68b3f0218cdf141629fb56e967474982d1cc95a413cd4bc7db289f8",
       "abi": [
         {
           "type": "impl",
@@ -1748,8 +1808,8 @@
         }
       ],
       "init_calldata": [],
-      "tag": "budokan-erc20_mock",
-      "selector": "0x568b8787c945009e6c2b9ece45774a34451c934b5570fabf21efc8743a67a6d",
+      "tag": "budokan_v_1_0_4-erc20_mock",
+      "selector": "0x15dcc1b1767bef0de1a0b207f8285dc179c1bc917cf355c1309cb63719c6028",
       "systems": [
         "dojo_init",
         "mint",
@@ -1761,8 +1821,8 @@
       ]
     },
     {
-      "address": "0x699e697f81b31c3541eb58512c459aa368ed16639a31329b365407e354e387f",
-      "class_hash": "0x68b4995d5f0c58d051b153e33a9debcb63a2afd99781730bee8ae1f80edb3a9",
+      "address": "0x3cd49567e166e69cae48d7cd0391a087bcfbc034b85363cbfe4c24a6e88e747",
+      "class_hash": "0x579ccb402e3d32011dd9b391b397b6ba1bd643255dc83c79e8af3c4c2deab61",
       "abi": [
         {
           "type": "impl",
@@ -2452,8 +2512,8 @@
         }
       ],
       "init_calldata": [],
-      "tag": "budokan-erc721_mock",
-      "selector": "0x50f54dc99b99c24b2ebe2c9f22e1935c87c0f8e6565aa2de607a3fa1456d33c",
+      "tag": "budokan_v_1_0_4-erc721_mock",
+      "selector": "0x24ef1be301b381ff4430644478f1b6bb26704c0f5c92916f05972322c9da25b",
       "systems": [
         "dojo_init",
         "mint",
@@ -2468,8 +2528,8 @@
       ]
     },
     {
-      "address": "0x63ff13e3394a65590dfae8f7fd736624a0c4f10c10cf88d1b912edb2d1404f3",
-      "class_hash": "0x524cb6582d317838fa26f75604f849698013b57593c1405b56657a86bf0f15a",
+      "address": "0x6b9ae82d70df624b322f96a602cbf95301e0bf03b9381ce7bdbbf23916573b2",
+      "class_hash": "0x50e4743186cf232a86a457daad214515da019f072a9e41bd1fbbfed0307364c",
       "abi": [
         {
           "type": "impl",
@@ -2649,17 +2709,6 @@
               ],
               "outputs": [],
               "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "score_model_and_attribute",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "(core::felt252, core::felt252)"
-                }
-              ],
-              "state_mutability": "view"
             }
           ]
         },
@@ -2933,6 +2982,39 @@
             {
               "type": "function",
               "name": "namespace",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "score_model",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "score_attribute",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "settings_model",
               "inputs": [],
               "outputs": [
                 {
@@ -3507,8 +3589,8 @@
         }
       ],
       "init_calldata": [],
-      "tag": "budokan-game_mock",
-      "selector": "0x42090ad5e0bc7744144a1ea6e820c48681c43ec2e074c751b0ca703685407bb",
+      "tag": "budokan_v_1_0_4-game_mock",
+      "selector": "0x3af5d0656cae2829f92f0f41d94bb8731fec13de92ba7582f93ddbee899da6f",
       "systems": [
         "start_game",
         "end_game",
@@ -3527,8 +3609,8 @@
       ]
     },
     {
-      "address": "0x5de213b0a6c484b6f3da4b8bf0f9adfb88a4737b7b9916bbeb03e3eff47fa7",
-      "class_hash": "0x18170f3f406d63bcff001a1b4ebed3a9f895e4924683a9057d94c6b8c839fc7",
+      "address": "0x4e3042789c47c435363bd930958083e33bf6e1edef125bce7328348568bb153",
+      "class_hash": "0x605116a82db341e96d8649c14c55b4653325f2c4b90ad5973340eb48e0982da",
       "abi": [
         {
           "type": "impl",
@@ -3839,6 +3921,20 @@
           ]
         },
         {
+          "type": "enum",
+          "name": "core::option::Option::<core::integer::u32>",
+          "variants": [
+            {
+              "name": "Some",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "None",
+              "type": "()"
+            }
+          ]
+        },
+        {
           "type": "struct",
           "name": "core::array::Span::<core::integer::u64>",
           "members": [
@@ -3874,7 +3970,7 @@
         },
         {
           "type": "enum",
-          "name": "tournaments::components::models::tournament::EntryRequirement",
+          "name": "tournaments::components::models::tournament::EntryRequirementType",
           "variants": [
             {
               "name": "token",
@@ -3887,6 +3983,20 @@
             {
               "name": "allowlist",
               "type": "core::array::Span::<core::starknet::contract_address::ContractAddress>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "tournaments::components::models::tournament::EntryRequirement",
+          "members": [
+            {
+              "name": "entry_limit",
+              "type": "core::option::Option::<core::integer::u32>"
+            },
+            {
+              "name": "entry_requirement_type",
+              "type": "tournaments::components::models::tournament::EntryRequirementType"
             }
           ]
         },
@@ -4105,6 +4215,36 @@
           ]
         },
         {
+          "type": "struct",
+          "name": "tournaments::components::models::tournament::Prize",
+          "members": [
+            {
+              "name": "id",
+              "type": "core::integer::u64"
+            },
+            {
+              "name": "tournament_id",
+              "type": "core::integer::u64"
+            },
+            {
+              "name": "payout_position",
+              "type": "core::integer::u8"
+            },
+            {
+              "name": "token_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "token_type",
+              "type": "tournaments::components::models::tournament::TokenType"
+            },
+            {
+              "name": "sponsor_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ]
+        },
+        {
           "type": "enum",
           "name": "tournaments::components::models::schedule::Phase",
           "variants": [
@@ -4309,6 +4449,22 @@
               "outputs": [
                 {
                   "type": "tournaments::components::models::tournament::Registration"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "get_prize",
+              "inputs": [
+                {
+                  "name": "prize_id",
+                  "type": "core::integer::u64"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "tournaments::components::models::tournament::Prize"
                 }
               ],
               "state_mutability": "view"
@@ -4927,8 +5083,8 @@
         }
       ],
       "init_calldata": [],
-      "tag": "budokan-tournament_mock",
-      "selector": "0x4a922a91e859c67f4196eec22a9279b19801401eface227b1447b726b8a1a4e",
+      "tag": "budokan_v_1_0_4-tournament_mock",
+      "selector": "0x21bb87b248f02c1b09c5cbde6d9f44fbabf6c8004e5a46895510746e8d6be7d",
       "systems": [
         "initializer",
         "upgrade",
@@ -4948,115 +5104,123 @@
       ]
     }
   ],
+  "libraries": [],
   "models": [
     {
       "members": [],
-      "class_hash": "0x6ca3d4ef263a973153f92c1a60cb781781e5af6dc620697074c2c5a26116e21",
-      "tag": "budokan-EntryCount",
-      "selector": "0x5317c2a9c9ce872d3965cedfb10c901e98ddc82bf0e7c23b64da14b491ace2c"
+      "class_hash": "0x1b369f3dcff3afd5d63a2efd2b7f585772306924ad4f0055804e519e9852b",
+      "tag": "budokan_v_1_0_4-EntryCount",
+      "selector": "0x57d20552d3af91fbc491891fa1e8d9fe62d968b40fdd941ca62830b2fdc9aa2"
     },
     {
       "members": [],
-      "class_hash": "0x7634474ae448d779e8b6edf6e13d22d0414ec01f04167061fe0cbce7509e3d7",
-      "tag": "budokan-GameCounter",
-      "selector": "0x7f785ad9cfbf33a3df14a272db15ca3544cb4006f944218027ed53cd2a51c74"
+      "class_hash": "0x2942c6bc2a7c32e8fc6388074538f83c5cd92006b120012fbf8d4a47d6aef1",
+      "tag": "budokan_v_1_0_4-GameCounter",
+      "selector": "0x7d8f622100baba7a5225a4900d4671f540eb0f5bf047dc809633c123efa468c"
     },
     {
       "members": [],
-      "class_hash": "0x7f8343d96398622c5cd8e8bf36071b29b8e96050bb2af4b9d1261d164d7f782",
-      "tag": "budokan-GameMetadata",
-      "selector": "0x6009eace8814a01e780cd6b0637ee22065e0458bef9328086b15a2f52758051"
+      "class_hash": "0x7b821ba31e4a384100d02c71e21bc12f2c6b809dc28dd313d9b2fee2d7e78fb",
+      "tag": "budokan_v_1_0_4-GameMetadata",
+      "selector": "0x1b3996a6416ac01cfa518a2fac7a6349c908d7d6763f357115dbb105ede1088"
     },
     {
       "members": [],
-      "class_hash": "0x361a321854495deada9c9abf00c13e9d757f11175ae98088a2f8d868690a02b",
-      "tag": "budokan-Leaderboard",
-      "selector": "0x7d418a5cf388c4090e39189639659fc4baf93e78dfbb5c816fd758ea7751f2d"
+      "class_hash": "0x1d42aea2184b68f4a2392875726a13ebaf2c32bcd17768e513640b6585517de",
+      "tag": "budokan_v_1_0_4-Leaderboard",
+      "selector": "0x1603e193e112ee98ea7dfdc72d7cb9a746834be2e3b99b16e5aa12046c34396"
     },
     {
       "members": [],
-      "class_hash": "0x5eafb9e7e80810c5db578cb8fa25324bc02ccae526ef3f6800d74ef3a5801e6",
-      "tag": "budokan-PlatformMetrics",
-      "selector": "0x3c252cb62b928c5378c88b19fbc670b47e89504edd05f612c30dcf552557124"
+      "class_hash": "0x43fb3ed9dda938fffc97d0b6f429595752fd8458e83586ed6bbc575af0c9454",
+      "tag": "budokan_v_1_0_4-PlatformMetrics",
+      "selector": "0x6aa3343040fcb1a23ad36357e0fba94e8d5c2c1ff8bdaaa1887927b5d69d8d7"
     },
     {
       "members": [],
-      "class_hash": "0x233194bd39d24ac8176b0f90df77a0375746a578d1c761575c66eb2e20d4b3f",
-      "tag": "budokan-Prize",
-      "selector": "0x4b19cf8bb676a571f2f0cf10aac61888411b9e27eae7bfe21ad7e4be8fcd56a"
+      "class_hash": "0x5fb3a5f9e9e2769e610ec882d8c1cfe66de6f982d538a6d3df3933893380ba6",
+      "tag": "budokan_v_1_0_4-Prize",
+      "selector": "0x46d96c7863871d02af31f4a94473faf967c1f92abc2948d5c78540376a3ca2d"
     },
     {
       "members": [],
-      "class_hash": "0x7053c532c03b187b5cc80d5dfcd4c92ced699b89535e2d6d2a684dfb433f2e7",
-      "tag": "budokan-PrizeClaim",
-      "selector": "0x5ae1e4009a6a41ea5c20b29ab0b4de4ee67231ed9dfeac2eada08bbd850c76c"
+      "class_hash": "0x14f8576c205eb3078dfe4151d195ac9bb4a540418249577c0a798a3c97a1bf1",
+      "tag": "budokan_v_1_0_4-PrizeClaim",
+      "selector": "0x295ed21c79f3db09105bcc29372b660fe431fe7f92b2b76db13d337d5230938"
     },
     {
       "members": [],
-      "class_hash": "0x4b008256b5e688ab2e82500f60d1436e2aa72fc56d96813af1b27850ec806ed",
-      "tag": "budokan-PrizeMetrics",
-      "selector": "0x57aadf439d05ad18eabfad09f6cc5ca51793eb1c7dc9d3928bc69a9b1f9d862"
+      "class_hash": "0x75c07fa9145001d591777e221419b551acdd0da0e2c30483d91da2aed16d9a9",
+      "tag": "budokan_v_1_0_4-PrizeMetrics",
+      "selector": "0xebf4b6c8a89232062f89907af1f029d9a3dcb1667adaf454b0ea7a159fa79b"
     },
     {
       "members": [],
-      "class_hash": "0x59fd7f4e2ea7f214b10df6fbbf1b53f2f90eb7e7ead23dd9deb5a2bec600055",
-      "tag": "budokan-Registration",
-      "selector": "0x4e2e644a78cbd3f34c269bf04c1aa8945d757ee70365a91aa3ff1c725e5e422"
+      "class_hash": "0x2fa32243b81a35c918e176d4c986d6a8c1cf7ffc78c29de0424f25903245d88",
+      "tag": "budokan_v_1_0_4-QualificationEntries",
+      "selector": "0x70df21660a106d903c87c0cd2b4dc5f97497993e5f3485a63dec94ee46b93fe"
     },
     {
       "members": [],
-      "class_hash": "0x1cbfe9c95d6428d3699cdfe922689995300ef06537e6695b8cc238dfd9b2a6c",
-      "tag": "budokan-Score",
-      "selector": "0x3abc281fd1a8f55f6f601c841c01c1f2ff7637008ee1a43077f46ab6f173c78"
+      "class_hash": "0x2e6a3ae3dbb2d2151edd5999c059faf8ec2215cff0cb7e5b6cbda9db65fc966",
+      "tag": "budokan_v_1_0_4-Registration",
+      "selector": "0x2d28450bec3e1eff8ae506b4fe31e3359e647802234290a3fe269043d2afe9"
     },
     {
       "members": [],
-      "class_hash": "0x6a2219b6866e1862fe52c8325d3b517bb121a0685677fcbed97f2caa6f4dc28",
-      "tag": "budokan-Settings",
-      "selector": "0x363ace7c4113e2005b484bb307ca7ee6f07ebf8ac6dbb78e0ae84e431871581"
+      "class_hash": "0xd4b859cbf8bef2d1e9f81a3e598e281ed855009341058328b10f43204f00ec",
+      "tag": "budokan_v_1_0_4-Score",
+      "selector": "0x131d1ae51fbb03f87c125d8f98acd22eafbabb27c5c08e86b63665b0839618a"
     },
     {
       "members": [],
-      "class_hash": "0x5f19e106f871814473a3940a490ccac63804a216f1dbe31c383e8e0831159e",
-      "tag": "budokan-SettingsCounter",
-      "selector": "0x62079ee435e4b497918e4ebfc599c3c8aba4a81127a9ab47be0dfc5eef3b3b4"
+      "class_hash": "0x3f82fa61272a7c7513cf48e89ca431820f62a1560de657608aca5c8e6a58b9",
+      "tag": "budokan_v_1_0_4-Settings",
+      "selector": "0xad6fe73beb4e7991acb027600922b76fa800238599691249ba029cdfb68c4f"
     },
     {
       "members": [],
-      "class_hash": "0x4f140e4e65a924bc2e492d8ece550b97c13e22f24f72cb741d8d8d0c5044dd8",
-      "tag": "budokan-SettingsDetails",
-      "selector": "0x1f515128eec3409ccd6028f0b1a2f330ecfb061a8d8152c0092bcbb06fb96f8"
+      "class_hash": "0x5d31167fd55c0fdc83b6d51549b117981a395a6c0d8738eae62061ee33c3df1",
+      "tag": "budokan_v_1_0_4-SettingsCounter",
+      "selector": "0x2982d7ddefc26e17684adcd828e7ab5c54719bae71ddf02530be481607cdd50"
     },
     {
       "members": [],
-      "class_hash": "0x32e9bfe74774b3113f7e153bf7bafac83cc9036a2cefbba0291c5fa8770e97b",
-      "tag": "budokan-Token",
-      "selector": "0x63059bf3b792c36a385fa4ef0479be4a1a3e0b2d92e5e360901937707d7cbf9"
+      "class_hash": "0x4d2afc0312d98dc2223a44ae88223336bb0a59a1bf2bcdc50b6f3d8875fb66a",
+      "tag": "budokan_v_1_0_4-SettingsDetails",
+      "selector": "0x578b12f6c6b33237b7ca3224348afc59b548c40f3aa6042eae847ff79c76bbd"
     },
     {
       "members": [],
-      "class_hash": "0x4e2cb9df948d236db5e77096c6e73f94a1335713bfc3bc189bb0e08bf1c70ca",
-      "tag": "budokan-TokenMetadata",
-      "selector": "0x4a5a4556916cfacbc6a2ee5dbe917b848dc553f34895abf1f291b8acdef3956"
+      "class_hash": "0x6c0307f09e89edfc3516908d7cfe07d598d12d49a2a2875dee27a9026652481",
+      "tag": "budokan_v_1_0_4-Token",
+      "selector": "0x52c4e9080494b0379a8576c39215996c1d1f3ea03a0b737565da1333d60b0aa"
     },
     {
       "members": [],
-      "class_hash": "0x3c62096532d852f76e9996f68d8ca6e0ef49d1d9ca49e913b0ff24759e6c413",
-      "tag": "budokan-Tournament",
-      "selector": "0x2e9f6bb1106ecdee84bc5363d43cfe276231971a91cc759ef3e440fe401e0df"
+      "class_hash": "0x6d1a541f4d6ccf4dce9c6f60a6e40c24dbc3a60b925a80eb0c9a924c7491f9f",
+      "tag": "budokan_v_1_0_4-TokenMetadata",
+      "selector": "0x69f737bf387adea6ffb750b1ca1ec9574e00e5a57e1fdd02a761197aee038ac"
     },
     {
       "members": [],
-      "class_hash": "0x67ea83dba24b121dce2a2bfcbc1c087c7d65c76819a8b4ad5654bdc3f64eec0",
-      "tag": "budokan-TournamentConfig",
-      "selector": "0x55eb126429813c5de84c613b5e315541e3ab5d80f87416e52658350b10ba74a"
+      "class_hash": "0x4655e9e085581c0476ee908f2a7276f392ef72be400d9de644aca3711406724",
+      "tag": "budokan_v_1_0_4-Tournament",
+      "selector": "0x3e2e77a2ed17261f1606dc3f5aac9bc5332e3630b89bda27ae787d56b1c0269"
     },
     {
       "members": [],
-      "class_hash": "0x7ce70aa2e743ec49f916768cb8fe2ee42353eec7a1c3cc7741d286f92aa501a",
-      "tag": "budokan-TournamentTokenMetrics",
-      "selector": "0x3b92eaf887cfef5d8c42fd05aa8d0ce3a56796cb3d81582c6daff4c9356929d"
+      "class_hash": "0x34593c72d1af0eb1035327fe6c201ee82e01ab1f604e362f2741661800682a0",
+      "tag": "budokan_v_1_0_4-TournamentConfig",
+      "selector": "0x7109d42d7172e31132ed1d0894b0d4f2a8843f96a0e55c59bb0b615354aadc"
+    },
+    {
+      "members": [],
+      "class_hash": "0x291a4b7fe26bbb68ddd2f803e09bac6178d3132c37ca88efc9178781f6abacc",
+      "tag": "budokan_v_1_0_4-TournamentTokenMetrics",
+      "selector": "0x532cbe8f29299891acb33b5e9dd125a00c8095c35a706c229b1ad2993fa093"
     }
   ],
-  "events": []
+  "events": [],
+  "external_contracts": []
 }

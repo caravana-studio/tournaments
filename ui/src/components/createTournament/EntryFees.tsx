@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { StepProps } from "@/containers/CreateTournament";
 import {
@@ -9,162 +10,182 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import AmountInput from "@/components/createTournament/inputs/Amount";
-import { Switch } from "@/components/ui/switch";
 import TokenDialog from "@/components/dialogs/Token";
 import { Slider } from "@/components/ui/slider";
 import React from "react";
 import { Token } from "@/generated/models.gen";
+import {
+  calculateDistribution,
+  formatNumber,
+  getOrdinalSuffix,
+} from "@/lib/utils";
+import { getTokenSymbol } from "@/lib/tokensMeta";
+import { useEkuboPrices } from "@/hooks/useEkuboPrices";
+import { getTokenLogoUrl } from "@/lib/tokensMeta";
+import { OptionalSection } from "@/components/createTournament/containers/OptionalSection";
+import { TokenValue } from "@/components/createTournament/containers/TokenValue";
 
 const EntryFees = ({ form }: StepProps) => {
   const [selectedToken, setSelectedToken] = React.useState<Token | null>(null);
 
   const PREDEFINED_PERCENTAGES = [
-    { value: 0, label: "0%" },
     { value: 1, label: "1%" },
     { value: 5, label: "5%" },
     { value: 10, label: "10%" },
   ];
 
-  // Add local state for distribution weight
   const [distributionWeight, setDistributionWeight] = React.useState(1);
 
-  // Helper function to calculate weighted distribution with whole number rounding
-  const calculateDistribution = (
-    positions: number,
-    weight: number,
-    creatorFee: number,
-    gameFee: number
-  ) => {
-    const availablePercentage = 100 - creatorFee - gameFee;
+  const { prices, isLoading: pricesLoading } = useEkuboPrices({
+    tokens: [selectedToken?.symbol ?? ""],
+  });
 
-    // First calculate raw percentages
-    const rawDistributions: number[] = [];
-    for (let i = 0; i < positions; i++) {
-      const share = availablePercentage * Math.pow(1 - i / positions, weight);
-      rawDistributions.push(share);
-    }
+  const creatorFee = form.watch("entryFees.creatorFeePercentage") || 0;
+  const gameFee = form.watch("entryFees.gameFeePercentage") || 0;
+  const prizeDistribution =
+    form
+      .watch("entryFees.prizeDistribution")
+      ?.reduce((sum, pos) => sum + (pos.percentage || 0), 0) || 0;
 
-    // Normalize to get percentages
-    const total = rawDistributions.reduce((a, b) => a + b, 0);
-    const normalizedDistributions = rawDistributions.map(
-      (d) => (d * availablePercentage) / total
-    );
-
-    // Round down to whole numbers
-    const roundedDistributions = normalizedDistributions.map((d) =>
-      Math.floor(d)
-    );
-
-    // Calculate the remaining points to distribute (should be less than positions)
-    const remainingPoints =
-      availablePercentage - roundedDistributions.reduce((a, b) => a + b, 0);
-
-    // Distribute remaining points based on decimal parts
-    const decimalParts = normalizedDistributions.map((d, i) => ({
-      index: i,
-      decimal: d - Math.floor(d),
-    }));
-
-    // Sort by decimal part descending
-    decimalParts.sort((a, b) => b.decimal - a.decimal);
-
-    // Add one point to each position with highest decimal until we reach 100%
-    for (let i = 0; i < remainingPoints; i++) {
-      roundedDistributions[decimalParts[i].index]++;
-    }
-
-    return roundedDistributions;
-  };
-
-  // Update the total calculation display
-  const getTotalDistribution = () => {
-    const creatorFee = form.watch("entryFees.creatorFeePercentage") || 0;
-    const gameFee = form.watch("entryFees.gameFeePercentage") || 0;
-    const prizeDistribution =
-      form
-        .watch("entryFees.prizeDistribution")
-        ?.reduce((sum, pos) => sum + (pos.percentage || 0), 0) || 0;
-
+  const totalDistributionPercentage = useMemo(() => {
     return creatorFee + gameFee + prizeDistribution;
-  };
+  }, [creatorFee, gameFee, prizeDistribution]);
+
+  useEffect(() => {
+    const distributions = calculateDistribution(
+      form.watch("leaderboardSize"),
+      distributionWeight,
+      creatorFee,
+      gameFee
+    );
+    form.setValue(
+      "entryFees.prizeDistribution",
+      distributions.map((percentage, index) => ({
+        position: index + 1,
+        percentage,
+      }))
+    );
+  }, [creatorFee, gameFee, distributionWeight]);
+
+  useEffect(() => {
+    form.setValue(
+      "entryFees.amount",
+      (form.watch("entryFees.value") ?? 0) /
+        (prices?.[selectedToken?.symbol ?? ""] ?? 1)
+    );
+  }, [form.watch("entryFees.value"), prices]);
+
+  const entryFeeAmountExists = (form.watch("entryFees.amount") ?? 0) > 0;
 
   return (
     <FormField
       control={form.control}
       name="enableEntryFees"
       render={({ field }) => (
-        <FormItem className="flex flex-col p-4">
-          <div className="flex flex-row items-center justify-between">
-            <div className="flex flex-row items-center gap-5">
-              <FormLabel className="text-2xl font-astronaut">
-                Entry Fees
-              </FormLabel>
-              <FormDescription>Enable tournament entry fees</FormDescription>
-            </div>
-            <FormControl>
-              <div className="flex flex-row items-center gap-2">
-                <span className="uppercase text-neutral-500 font-bold">
-                  Optional
-                </span>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </div>
-            </FormControl>
-          </div>
+        <FormItem className="flex flex-col sm:p-4">
+          <OptionalSection
+            label="Entry Fees"
+            description="Enable tournament entry fees"
+            checked={field.value}
+            onCheckedChange={field.onChange}
+          />
 
           {field.value && (
             <>
-              <div className="w-full h-0.5 bg-retro-green/25" />
-              <div className="space-y-4 pt-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="w-full h-0.5 bg-brand/25" />
+              <div className="space-y-4">
+                <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="entryFees.tokenAddress"
                     render={({ field: tokenField }) => (
                       <FormItem>
                         <FormControl>
-                          <TokenDialog
-                            selectedToken={selectedToken}
-                            onSelect={(token) => {
-                              setSelectedToken(token);
-                              tokenField.onChange(token.address);
-                            }}
-                          />
+                          <div className="flex justify-center sm:justify-start pt-4 sm:pt-6">
+                            <TokenDialog
+                              selectedToken={selectedToken}
+                              onSelect={(token) => {
+                                setSelectedToken(token);
+                                tokenField.onChange(token.address);
+                              }}
+                              type="erc20"
+                            />
+                          </div>
                         </FormControl>
                       </FormItem>
                     )}
                   />
+                  <div className="w-full h-0.5 bg-brand/25 sm:hidden" />
                   <FormField
                     control={form.control}
-                    name="entryFees.amount"
+                    name="entryFees.value"
                     render={({ field }) => (
                       <FormItem>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex flex-row items-center gap-5">
+                            <FormLabel className="text-lg font-brand">
+                              Amount ($)
+                            </FormLabel>
+                            <FormDescription className="hidden sm:block sm:text-xs xl:text-sm">
+                              Prize amount in USD
+                            </FormDescription>
+                            <TokenValue
+                              className="sm:hidden"
+                              amount={form.watch("entryFees.amount") ?? 0}
+                              tokenAddress={selectedToken?.address ?? ""}
+                              usdValue={form.watch("entryFees.value") ?? 0}
+                              isLoading={pricesLoading}
+                            />
+                          </div>
+                        </div>
                         <FormControl>
-                          <AmountInput
-                            value={field.value || 0}
-                            onChange={field.onChange}
-                          />
+                          <div className="flex flex-row items-center gap-2">
+                            <AmountInput
+                              value={field.value || 0}
+                              onChange={field.onChange}
+                            />
+                            <TokenValue
+                              className="hidden sm:flex"
+                              amount={form.watch("entryFees.amount") ?? 0}
+                              tokenAddress={selectedToken?.address ?? ""}
+                              usdValue={form.watch("entryFees.value") ?? 0}
+                              isLoading={pricesLoading}
+                            />
+                          </div>
                         </FormControl>
                       </FormItem>
                     )}
                   />
                 </div>
-                <div className="w-full h-0.5 bg-retro-green/25" />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="w-full h-0.5 bg-brand/25" />
+                <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="entryFees.creatorFeePercentage"
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex flex-row items-center gap-5">
-                          <FormLabel className="font-astronaut text-lg">
+                          <FormLabel className="font-brand text-lg">
                             Creator Fee (%)
                           </FormLabel>
-                          <FormDescription>
+                          <FormDescription className="hidden sm:block sm:text-xs xl:text-sm">
                             Fee provided to the tournament creator
                           </FormDescription>
+                          <TokenValue
+                            className="sm:hidden"
+                            amount={
+                              ((form.watch("entryFees.amount") ?? 0) *
+                                (field.value ?? 0)) /
+                              100
+                            }
+                            tokenAddress={selectedToken?.address ?? ""}
+                            usdValue={
+                              ((form.watch("entryFees.value") ?? 0) *
+                                (field.value ?? 0)) /
+                              100
+                            }
+                            isLoading={pricesLoading}
+                          />
                         </div>
                         <FormControl>
                           <div className="div flex flex-row gap-2">
@@ -198,23 +219,54 @@ const EntryFees = ({ form }: StepProps) => {
                                 field.onChange(Number(e.target.value))
                               }
                             />
+                            <TokenValue
+                              className="hidden sm:flex"
+                              amount={
+                                ((form.watch("entryFees.amount") ?? 0) *
+                                  (field.value ?? 0)) /
+                                100
+                              }
+                              tokenAddress={selectedToken?.address ?? ""}
+                              usdValue={
+                                ((form.watch("entryFees.value") ?? 0) *
+                                  (field.value ?? 0)) /
+                                100
+                              }
+                              isLoading={pricesLoading}
+                            />
                           </div>
                         </FormControl>
                       </FormItem>
                     )}
                   />
+                  <div className="w-full h-0.5 bg-brand/25 sm:hidden" />
                   <FormField
                     control={form.control}
                     name="entryFees.gameFeePercentage"
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex flex-row items-center gap-5">
-                          <FormLabel className="font-astronaut text-lg">
+                          <FormLabel className="font-brand text-lg">
                             Game Fee (%)
                           </FormLabel>
-                          <FormDescription>
+                          <FormDescription className="hidden sm:block sm:text-xs xl:text-sm">
                             Fee provided to the game creator
                           </FormDescription>
+                          <TokenValue
+                            className="sm:hidden"
+                            amount={
+                              ((form.watch("entryFees.amount") ?? 0) *
+                                (field.value ?? 0)) /
+                              100
+                            }
+                            tokenAddress={selectedToken?.address ?? ""}
+                            usdValue={
+                              ((form.watch("entryFees.value") ?? 0) *
+                                (field.value ?? 0)) /
+                              100
+                            }
+                            isLoading={pricesLoading}
+                          />
                         </div>
                         <FormControl>
                           <div className="div flex flex-row gap-2">
@@ -247,69 +299,93 @@ const EntryFees = ({ form }: StepProps) => {
                                 field.onChange(Number(e.target.value))
                               }
                             />
+                            <TokenValue
+                              className="hidden sm:flex"
+                              amount={
+                                ((form.watch("entryFees.amount") ?? 0) *
+                                  (field.value ?? 0)) /
+                                100
+                              }
+                              tokenAddress={selectedToken?.address ?? ""}
+                              usdValue={
+                                ((form.watch("entryFees.value") ?? 0) *
+                                  (field.value ?? 0)) /
+                                100
+                              }
+                              isLoading={pricesLoading}
+                            />
                           </div>
                         </FormControl>
                       </FormItem>
                     )}
                   />
                 </div>
-                <div className="w-full h-0.5 bg-retro-green/25" />
+                <div className="w-full h-0.5 bg-brand/25" />
                 <div className="space-y-4">
-                  <div className="flex flex-row items-center gap-5">
-                    <FormLabel className="font-astronaut text-2xl">
-                      Prize Distribution
-                    </FormLabel>
-                    <FormDescription>
-                      Set prize percentages for each position
-                    </FormDescription>
-                  </div>
+                  <div className="flex flex-col sm:flex-row justify-between">
+                    <div className="flex flex-row items-center gap-5">
+                      <FormLabel className="font-brand text-lg">
+                        Prize Distribution
+                      </FormLabel>
+                      <FormDescription className="hidden sm:block sm:text-xs xl:text-sm">
+                        Set prize percentages for each position
+                      </FormDescription>
+                    </div>
 
-                  <div className="space-y-2">
-                    <FormLabel>Distribution Weight</FormLabel>
-                    <div className="flex flex-row items-center gap-4">
-                      <Slider
-                        min={0}
-                        max={5}
-                        step={0.1}
-                        value={[distributionWeight]}
-                        onValueChange={([value]) => {
-                          setDistributionWeight(value);
-                          const creatorFee =
-                            form.watch("entryFees.creatorFeePercentage") || 0;
-                          const gameFee =
-                            form.watch("entryFees.gameFeePercentage") || 0;
-                          const distributions = calculateDistribution(
-                            form.watch("leaderboardSize"),
-                            value,
-                            creatorFee,
-                            gameFee
-                          );
-                          form.setValue(
-                            "entryFees.prizeDistribution",
-                            distributions.map((percentage, index) => ({
-                              position: index + 1,
-                              percentage,
-                            }))
-                          );
-                        }}
-                        className="w-[200px]"
-                      />
-                      <span className="w-12 text-center">
-                        {distributionWeight.toFixed(1)}
-                      </span>
+                    <div className="space-y-2">
                       <div className="flex flex-row gap-2 items-center justify-between text-sm text-muted-foreground">
-                        <span>Total: {getTotalDistribution()}%</span>
-                        {getTotalDistribution() !== 100 && (
+                        <div className="flex flex-row items-center gap-2">
+                          <FormLabel>Distribution Weight</FormLabel>
+                          <FormDescription className="hidden sm:block sm:text-xs xl:text-sm">
+                            Adjust the spread of the distribution
+                          </FormDescription>
+                        </div>
+                        {totalDistributionPercentage !== 100 && (
                           <span className="text-destructive">
                             Total must equal 100%
                           </span>
                         )}
                       </div>
+                      <div className="flex flex-row items-center gap-4">
+                        <Slider
+                          min={0}
+                          max={5}
+                          step={0.1}
+                          value={[distributionWeight]}
+                          onValueChange={([value]) => {
+                            setDistributionWeight(value);
+                            const creatorFee =
+                              form.watch("entryFees.creatorFeePercentage") || 0;
+                            const gameFee =
+                              form.watch("entryFees.gameFeePercentage") || 0;
+                            const distributions = calculateDistribution(
+                              form.watch("leaderboardSize"),
+                              value,
+                              creatorFee,
+                              gameFee
+                            );
+                            form.setValue(
+                              "entryFees.prizeDistribution",
+                              distributions.map((percentage, index) => ({
+                                position: index + 1,
+                                percentage,
+                              }))
+                            );
+                          }}
+                          className="w-[200px]"
+                        />
+                        <span className="w-12 text-center">
+                          {distributionWeight.toFixed(1)}
+                        </span>
+                        <div className="flex flex-row gap-2 items-center justify-between text-sm text-muted-foreground">
+                          <span>Total: {totalDistributionPercentage}%</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="w-2/3">
-                    <div className="flex flex-row gap-4 overflow-x-auto">
+                  <div className="w-full">
+                    <div className="flex flex-col items-center sm:flex-row gap-4 overflow-x-auto pb-2">
                       {Array.from({
                         length: form.watch("leaderboardSize"),
                       }).map((_, index) => (
@@ -318,23 +394,75 @@ const EntryFees = ({ form }: StepProps) => {
                           control={form.control}
                           name={`entryFees.prizeDistribution.${index}.percentage`}
                           render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Position {index + 1}</FormLabel>
+                            <FormItem className="w-[175px] min-w-[175px] flex flex-row items-center justify-between flex-shrink-0 border border-neutral rounded-md p-2 space-y-0">
+                              <FormLabel>
+                                <span className="font-brand text-lg">
+                                  {index + 1}
+                                  {getOrdinalSuffix(index + 1)}
+                                </span>
+                              </FormLabel>
                               <FormControl>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="number"
-                                    {...field}
-                                    min="0"
-                                    max="100"
-                                    className="w-[80px]"
-                                    onChange={(e) => {
-                                      const value = Number(e.target.value);
-                                      field.onChange(value);
-                                    }}
-                                  />
-                                  <span>%</span>
-                                </div>
+                                <>
+                                  <div className="relative w-[50px] flex flex-row items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      {...field}
+                                      min="0"
+                                      max="100"
+                                      className="pr-4 px-1"
+                                      onChange={(e) => {
+                                        const value = Number(e.target.value);
+                                        field.onChange(value);
+                                      }}
+                                    />
+                                    <span className="absolute right-1 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                                      %
+                                    </span>
+                                  </div>
+                                  {entryFeeAmountExists && (
+                                    <div className="flex flex-col">
+                                      <div className="flex flex-row items-center gap-2">
+                                        <span className="text-xs">
+                                          {formatNumber(
+                                            ((form.watch(
+                                              `entryFees.prizeDistribution.${index}.percentage`
+                                            ) ?? 0) *
+                                              (form.watch("entryFees.amount") ??
+                                                0)) /
+                                              100
+                                          )}
+                                        </span>
+                                        <img
+                                          src={getTokenLogoUrl(
+                                            form.watch(
+                                              "entryFees.tokenAddress"
+                                            ) ?? ""
+                                          )}
+                                          className="w-3"
+                                        />
+                                      </div>
+                                      {prices?.[
+                                        getTokenSymbol(
+                                          form.watch(
+                                            "entryFees.tokenAddress"
+                                          ) ?? ""
+                                        ) ?? ""
+                                      ] && (
+                                        <span className="text-xs text-neutral">
+                                          ~$
+                                          {(
+                                            ((form.watch(
+                                              `entryFees.prizeDistribution.${index}.percentage`
+                                            ) ?? 0) *
+                                              (form.watch("entryFees.value") ??
+                                                0)) /
+                                            100
+                                          ).toFixed(2)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </>
                               </FormControl>
                             </FormItem>
                           )}

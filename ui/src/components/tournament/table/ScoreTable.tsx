@@ -1,22 +1,22 @@
 import { Card } from "@/components/ui/card";
 import Pagination from "@/components/table/Pagination";
-import { USER, VERIFIED, QUESTION } from "@/components/Icons";
+import { USER, VERIFIED } from "@/components/Icons";
 import { useState, useEffect, useMemo } from "react";
 import { Switch } from "@/components/ui/switch";
-import { BigNumberish } from "starknet";
+import { addAddressPadding, BigNumberish } from "starknet";
 import { useGetTournamentLeaderboard } from "@/dojo/hooks/useSqlQueries";
-import { displayAddress, feltToString, indexAddress } from "@/lib/utils";
+import { feltToString, indexAddress, bigintToHex } from "@/lib/utils";
 import { useDojo } from "@/context/dojo";
 import { useGetUsernames } from "@/hooks/useController";
-import RowSkeleton from "./RowSkeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { HoverCardContent } from "@/components/ui/hover-card";
 import { HoverCard } from "@/components/ui/hover-card";
 import { HoverCardTrigger } from "@/components/ui/hover-card";
+import {
+  MobilePlayerCard,
+  PlayerDetails,
+} from "@/components/tournament/table/PlayerCard";
+import TableSkeleton from "@/components/tournament/table/Skeleton";
+// import { Leaderboard } from "@/generated/models.gen";
 
 interface ScoreTableProps {
   tournamentId: BigNumberish;
@@ -26,6 +26,7 @@ interface ScoreTableProps {
   gameScoreModel: string;
   gameScoreAttribute: string;
   isEnded: boolean;
+  // leaderboardModel: Leaderboard;
 }
 
 const ScoreTable = ({
@@ -36,21 +37,28 @@ const ScoreTable = ({
   gameScoreModel,
   gameScoreAttribute,
   isEnded,
-}: ScoreTableProps) => {
+}: // leaderboardModel,
+ScoreTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showParticipants, setShowParticipants] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [isMobileDialogOpen, setIsMobileDialogOpen] = useState(false);
   const { nameSpace } = useDojo();
+  const [prevEntryCount, setPrevEntryCount] = useState<number | null>(null);
+  const offset = (currentPage - 1) * 10;
 
-  const offset = (currentPage - 1) * 5;
-
-  const { data: leaderboard, loading } = useGetTournamentLeaderboard({
+  const {
+    data: leaderboard,
+    refetch: refetchLeaderboard,
+    loading,
+  } = useGetTournamentLeaderboard({
     namespace: nameSpace,
-    tournamentId: tournamentId,
+    tournamentId: addAddressPadding(bigintToHex(tournamentId)),
     gameNamespace: gameNamespace,
-    gameAddress: indexAddress(gameAddress.toString()),
+    gameAddress: indexAddress(gameAddress?.toString() ?? "0x0"),
     gameScoreModel: gameScoreModel,
     gameScoreAttribute: gameScoreAttribute,
-    limit: 5,
+    limit: 10,
     offset: offset,
   });
 
@@ -60,26 +68,36 @@ const ScoreTable = ({
   );
 
   useEffect(() => {
+    if (prevEntryCount !== null && prevEntryCount !== entryCount) {
+      const timer = setTimeout(() => {
+        refetchLeaderboard();
+        console.log("refetching leaderboard");
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+
+    setPrevEntryCount(entryCount);
     setShowParticipants(entryCount > 0);
-  }, [entryCount]);
+  }, [entryCount, prevEntryCount]);
 
   const { usernames } = useGetUsernames(ownerAddresses ?? []);
-
-  console.log(isEnded);
 
   return (
     <Card
       variant="outline"
-      className={`w-1/2 transition-all duration-300 ease-in-out ${
-        showParticipants ? "h-[200px]" : "h-[60px]"
+      className={`sm:w-1/2 transition-all duration-300 ease-in-out ${
+        showParticipants ? "h-[210px] 3xl:h-[270px]" : "h-[60px] 3xl:h-[80px]"
       }`}
     >
       <div className="flex flex-col justify-between">
-        <div className="flex flex-row justify-between h-8">
-          <span className="font-astronaut text-2xl">Scores</span>
-          {showParticipants && entryCount > 5 && (
+        <div className="flex flex-row items-center justify-between h-6 sm:h-8 3xl:h-10">
+          <span className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
+            Scores
+          </span>
+          {showParticipants && entryCount > 10 && (
             <Pagination
-              totalPages={Math.ceil(entryCount / 5)}
+              totalPages={Math.ceil(entryCount / 10)}
               currentPage={currentPage}
               setCurrentPage={setCurrentPage}
             />
@@ -87,17 +105,18 @@ const ScoreTable = ({
           <div className="flex flex-row items-center gap-2">
             {entryCount > 0 && (
               <>
-                <span className="text-neutral-500">
+                <span className="hidden sm:block text-neutral 3xl:text-lg">
                   {showParticipants ? "Hide" : "Show Participants"}
                 </span>
                 <Switch
                   checked={showParticipants}
                   onCheckedChange={setShowParticipants}
+                  className="hidden sm:block"
                 />
               </>
             )}
-            <div className="flex flex-row items-center font-astronaut text-2xl">
-              <span className="w-10">
+            <div className="flex flex-row items-center font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
+              <span className="w-8 2xl:w-10 3xl:w-12">
                 <USER />
               </span>
               : {entryCount}
@@ -105,133 +124,144 @@ const ScoreTable = ({
           </div>
         </div>
         <div
-          className={`transition-all duration-300 delay-150 ease-in-out ${
+          className={`transition-all duration-300 delay-50 ease-in-out ${
             showParticipants ? "h-auto opacity-100" : "h-0 opacity-0"
-          } overflow-hidden`}
+          }`}
         >
-          <div className="w-full h-0.5 bg-retro-green/25 mt-2" />
+          <div className="w-full h-0.5 bg-brand/25 mt-2" />
           {!loading ? (
             <div className="flex flex-row py-2">
               {[0, 1].map((colIndex) => (
-                <div key={colIndex} className="flex flex-col w-1/2">
+                <div
+                  key={colIndex}
+                  className={`flex flex-col w-1/2 relative ${
+                    colIndex === 0 ? "pr-3" : "pl-3"
+                  }`}
+                >
+                  {colIndex === 0 && leaderboard.length > 5 && (
+                    <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-brand/25 h-full" />
+                  )}
                   {leaderboard
                     ?.slice(colIndex * 5, colIndex * 5 + 5)
                     .map((registration, index) => (
-                      <HoverCard key={index} openDelay={50} closeDelay={0}>
-                        <HoverCardTrigger asChild>
-                          <div className="flex flex-row items-center gap-2 pr-2 hover:cursor-pointer hover:bg-retro-green/25 hover:border-retro-green/30 border border-transparent rounded transition-all duration-200">
-                            <span className="w-4 flex-none font-astronaut">
-                              {index +
-                                1 +
-                                colIndex * 5 +
-                                (currentPage - 1) * 10}
-                              .
-                            </span>
-                            <span className="w-6 flex-none">
-                              <USER />
-                            </span>
-                            <span className="flex-none max-w-20 group-hover:text-retro-green transition-colors duration-200">
-                              {feltToString(registration?.player_name)}
-                            </span>
-                            <p
-                              className="flex-1 h-[2px] bg-repeat-x"
-                              style={{
-                                backgroundImage:
-                                  "radial-gradient(circle, currentColor 1px, transparent 1px)",
-                                backgroundSize: "8px 8px",
-                                backgroundPosition: "0 center",
-                              }}
-                            ></p>
-                            <div className="flex flex-row items-center gap-2">
-                              <span className="flex-none text-retro-green font-astronaut">
-                                {registration.score ?? 0}
-                              </span>
-                            </div>
-                          </div>
-                        </HoverCardTrigger>
-                        <HoverCardContent
-                          className="w-60 py-4 px-0 text-sm z-50"
-                          align="start"
-                          alignOffset={-75}
-                          side="top"
-                          sideOffset={10}
-                        >
-                          <div className="flex flex-col gap-4">
-                            <div className="flex flex-col gap-2 px-4">
-                              <div className="flex flex-row gap-2">
-                                <span className="text-retro-green-dark">
-                                  Player Name:
+                      <div key={index}>
+                        {/* Desktop hover card (hidden on mobile) */}
+                        <div className="hidden sm:block">
+                          <HoverCard openDelay={50} closeDelay={0}>
+                            <HoverCardTrigger asChild>
+                              <div
+                                className={`flex flex-row items-center sm:gap-1 xl:gap-2 px-2 hover:cursor-pointer hover:bg-brand/25 hover:border-brand/30 border border-transparent rounded transition-all duration-200 3xl:text-lg relative ${
+                                  registration.has_submitted ? "pr-4" : ""
+                                }`}
+                              >
+                                <span className="w-4 flex-none font-brand">
+                                  {index +
+                                    1 +
+                                    colIndex * 5 +
+                                    (currentPage - 1) * 10}
+                                  .
                                 </span>
-                                <span>
+                                <span className="w-6 3xl:w-8 flex-none">
+                                  <USER />
+                                </span>
+                                <span className="flex-none lg:max-w-20 xl:max-w-24 2xl:max-w-28 3xl:max-w-44 group-hover:text-brand transition-colors duration-200 text-ellipsis overflow-hidden whitespace-nowrap">
                                   {feltToString(registration?.player_name)}
                                 </span>
+                                <p
+                                  className="flex-1 h-[2px] bg-repeat-x"
+                                  style={{
+                                    backgroundImage:
+                                      "radial-gradient(circle, currentColor 1px, transparent 1px)",
+                                    backgroundSize: "8px 8px",
+                                    backgroundPosition: "0 center",
+                                  }}
+                                ></p>
+                                <div className="flex flex-row items-center gap-2">
+                                  <span className="flex-none text-brand font-brand">
+                                    {registration.score ?? 0}
+                                  </span>
+                                </div>
+                                {!!registration.has_submitted && (
+                                  <span className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-5 h-5">
+                                    <VERIFIED />
+                                  </span>
+                                )}
                               </div>
-                              <div className="flex flex-row gap-2">
-                                <span className="text-retro-green-dark">
-                                  Owner:
-                                </span>
-                                <span>
-                                  {usernames?.get(
-                                    ownerAddresses?.[index] ?? ""
-                                  ) ||
-                                    displayAddress(
-                                      ownerAddresses?.[index] ?? ""
-                                    )}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="w-full h-0.5 bg-retro-green/50" />
-                            {registration?.metadata !== "" ? (
-                              <img
-                                src={JSON.parse(registration?.metadata)?.image}
-                                alt="metadata"
-                                className="w-full h-auto px-4"
+                            </HoverCardTrigger>
+                            <HoverCardContent
+                              className="py-4 px-0 text-sm z-50"
+                              align="center"
+                              side="top"
+                            >
+                              <PlayerDetails
+                                playerName={registration?.player_name}
+                                ownerAddress={
+                                  ownerAddresses?.[index + colIndex * 5]
+                                }
+                                usernames={usernames}
+                                metadata={registration?.metadata}
+                                isEnded={isEnded}
+                                hasSubmitted={registration.has_submitted}
                               />
-                            ) : (
-                              <span className="text-center text-neutral-500">
-                                No Token URI
-                              </span>
-                            )}
-                            {isEnded && (
-                              <Tooltip delayDuration={50}>
-                                <TooltipTrigger asChild>
-                                  <div className="absolute top-2 right-2 w-8 text-retro-green hover:cursor-pointer">
-                                    {registration.has_submitted ? (
-                                      <VERIFIED />
-                                    ) : (
-                                      <QUESTION />
-                                    )}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent className="border-retro-green-dark bg-black text-neutral-500">
-                                  {registration.has_submitted
-                                    ? "Submitted"
-                                    : "Not submitted"}
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
+                            </HoverCardContent>
+                          </HoverCard>
+                        </div>
+
+                        {/* Mobile clickable row (hidden on desktop) */}
+                        <div
+                          className="sm:hidden flex flex-row items-center sm:gap-2 hover:cursor-pointer hover:bg-brand/25 hover:border-brand/30 border border-transparent rounded transition-all duration-200"
+                          onClick={() => {
+                            setSelectedPlayer({
+                              registration,
+                              index: index + colIndex * 5,
+                            });
+                            setIsMobileDialogOpen(true);
+                          }}
+                        >
+                          <span className="w-4 flex-none font-brand">
+                            {index + 1 + colIndex * 5 + (currentPage - 1) * 10}.
+                          </span>
+                          <span className="w-6 flex-none">
+                            <USER />
+                          </span>
+                          <span className="flex-none max-w-16 group-hover:text-brand transition-colors duration-200 text-ellipsis overflow-hidden whitespace-nowrap">
+                            {feltToString(registration?.player_name)}
+                          </span>
+                          <p
+                            className="flex-1 h-[2px] bg-repeat-x"
+                            style={{
+                              backgroundImage:
+                                "radial-gradient(circle, currentColor 1px, transparent 1px)",
+                              backgroundSize: "8px 8px",
+                              backgroundPosition: "0 center",
+                            }}
+                          ></p>
+                          <div className="flex flex-row items-center gap-2">
+                            <span className="flex-none text-brand font-brand">
+                              {registration.score ?? 0}
+                            </span>
                           </div>
-                        </HoverCardContent>
-                      </HoverCard>
+                        </div>
+                      </div>
                     ))}
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex flex-row">
-              {[0, 1].map((colIndex) => (
-                <div key={colIndex} className="flex flex-col gap-1 py-2 w-1/2">
-                  {[...Array(Math.min(entryCount - offset, 5))].map(
-                    (_, index) => (
-                      <RowSkeleton key={index} />
-                    )
-                  )}
-                </div>
-              ))}
-            </div>
+            <TableSkeleton entryCount={entryCount} offset={offset} />
           )}
         </div>
       </div>
+
+      {/* Mobile dialog for player details */}
+      <MobilePlayerCard
+        open={isMobileDialogOpen}
+        onOpenChange={setIsMobileDialogOpen}
+        selectedPlayer={selectedPlayer}
+        usernames={usernames}
+        ownerAddress={ownerAddresses?.[selectedPlayer?.index ?? 0]}
+        isEnded={isEnded}
+      />
     </Card>
   );
 };

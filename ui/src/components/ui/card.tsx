@@ -1,22 +1,21 @@
 import * as React from "react";
 import BorderImage from "@/components/icons/BorderImage";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn, adjustColorOpacity } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
   "inline-flex flex-col gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors [border-style:solid] [border-image-slice:4] [border-image-width:4px] relative",
   {
     variants: {
       variant: {
-        default: "bg-retro-green text-black border-2",
-        destructive: "bg-red-500 text-neutral-50",
-        outline: `bg-black text-retro-green border-2 border-retro-green`,
+        default: "bg-brand text-black border-2",
+        destructive: "bg-destructive text-neutral-50 border-2",
+        outline: "bg-black text-brand border-2 border-brand",
       },
       size: {
-        default: "h-48 p-4",
-        sm: "p-3",
-        lg: "p-8",
-        xl: "p-10",
+        default: "p-4",
+        sm: "p-2",
+        lg: "p-6",
       },
     },
     defaultVariants: {
@@ -27,9 +26,9 @@ const cardVariants = cva(
 );
 
 const interactiveVariants = {
-  default: "hover:bg-retro-green/90 hover:cursor-pointer",
-  destructive: "hover:bg-red-500/90 hover:cursor-pointer",
-  outline: "hover:bg-retro-green/10 hover:cursor-pointer",
+  default: "hover:bg-brand/90 hover:cursor-pointer",
+  destructive: "hover:bg-destructive/90 hover:cursor-pointer",
+  outline: "hover:bg-brand/10 hover:cursor-pointer",
 } as const;
 
 const disabledVariants = {
@@ -41,7 +40,6 @@ const disabledVariants = {
 export interface CardProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof cardVariants> {
-  borderColor?: string;
   interactive?: boolean;
   disabled?: boolean;
 }
@@ -52,7 +50,6 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       className,
       variant,
       size,
-      borderColor = "rgba(0, 140, 105, 1)",
       interactive = false,
       disabled = false,
       onClick,
@@ -61,8 +58,6 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     },
     ref
   ) => {
-    const [isHovered, setIsHovered] = React.useState(false);
-
     const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
       if (disabled) return;
       onClick?.(e);
@@ -70,10 +65,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
     // Generate the border image dynamically
     const borderImage = `url("data:image/svg+xml,${BorderImage({
-      color:
-        interactive && isHovered
-          ? adjustColorOpacity(borderColor, 0.9)
-          : borderColor,
+      variant: variant || "default",
     })}")`;
 
     return (
@@ -87,8 +79,6 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         style={{
           borderImageSource: `${borderImage}`,
         }}
-        onMouseEnter={() => interactive && setIsHovered(true)}
-        onMouseLeave={() => interactive && setIsHovered(false)}
         onClick={handleClick}
         {...(disabled ? { "aria-disabled": true } : {})}
         {...props}

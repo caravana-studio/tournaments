@@ -48,19 +48,19 @@ function Calendar({
         table: "w-full border-collapse space-y-1",
         head_row: "flex justify-center",
         head_cell:
-          "text-retro-green rounded-md w-9 font-normal text-[0.8rem] dark:text-neutral-400",
+          "text-brand rounded-md w-9 font-normal text-[0.8rem] dark:text-neutral",
         row: "flex justify-center w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-neutral-100/50 [&:has([aria-selected])]:bg-retro-green first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20 dark:[&:has([aria-selected].day-outside)]:bg-neutral-800/50 dark:[&:has([aria-selected])]:bg-neutral-800",
-        day: "h-9 w-9 p-0 font-normal aria-selected:bg-retro-green-dark aria-selected:text-black rounded-none",
+        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-neutral/50 [&:has([aria-selected])]:bg-brand first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20 dark:[&:has([aria-selected].day-outside)]:bg-neutral/50 dark:[&:has([aria-selected])]:bg-neutral",
+        day: "h-9 w-9 p-0 font-normal aria-selected:bg-brand-muted aria-selected:text-black rounded-none",
         day_range_end: "day-range-end",
         day_selected:
-          "bg-retro-green text-black hover:bg-neutral-900 hover:text-neutral-50 focus:bg-neutral-900 focus:text-neutral-50",
-        day_today: "text-neutral-500 border border-retro-green-dark",
+          "bg-brand text-black hover:bg-neutral hover:text-neutral-50 focus:bg-neutral focus:text-neutral-50",
+        day_today: "text-neutral border border-brand-muted",
         day_outside:
-          "day-outside text-neutral-500 aria-selected:bg-neutral-100/50 aria-selected:text-neutral-500",
-        day_disabled: "text-neutral-500 opacity-50 dark:text-neutral-400",
+          "day-outside text-neutral aria-selected:bg-neutral/50 aria-selected:text-neutral",
+        day_disabled: "text-neutral opacity-50 dark:text-neutral",
         day_range_middle:
-          "aria-selected:bg-neutral-100 aria-selected:text-neutral-900 dark:aria-selected:bg-neutral-800 dark:aria-selected:text-neutral-50",
+          "aria-selected:bg-neutral aria-selected:text-neutral dark:aria-selected:bg-neutral dark:aria-selected:text-neutral-50",
         day_hidden: "invisible",
         ...classNames,
       }}

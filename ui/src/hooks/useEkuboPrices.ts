@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDojo } from "@/context/dojo";
-import { ChainId } from "@/dojo/config";
+import { ChainId } from "@/dojo/setup/networks";
 
 export interface TokenPrices {
   [key: string]: number | undefined;
@@ -16,13 +16,13 @@ export const useEkuboPrices = ({ tokens }: EkuboPriceProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const isMainnet = selectedChainConfig.chainId === ChainId.SN_MAIN;
+  const tokensKey = JSON.stringify(tokens);
 
   useEffect(() => {
     const fetchPrices = async () => {
       try {
         if (!isMainnet) {
           // For non-mainnet, set all token prices to 1
-          console.log("tokens", tokens);
           const mockPrices = tokens.reduce(
             (acc, token) => ({
               ...acc,
@@ -84,7 +84,7 @@ export const useEkuboPrices = ({ tokens }: EkuboPriceProps) => {
     };
 
     fetchPrices();
-  }, [tokens.join(","), selectedChainConfig.ekuboPriceAPI, isMainnet]); // Using join to create a stable dependency
+  }, [tokensKey, selectedChainConfig.ekuboPriceAPI, isMainnet]);
 
   return {
     prices,

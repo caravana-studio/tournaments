@@ -19,7 +19,7 @@ const EntryInfo = ({ entryNumber, tokenMetadata }: EntryInfoProps) => {
           <h4 className="font-medium">Entry #{entryNumber}</h4>
           <p className="text-muted-foreground">Game Settings</p>
         </div>
-        <div className="w-full h-0.5 bg-retro-green/50" />
+        <div className="w-full h-0.5 bg-brand/50" />
         {tokenMetadata !== "" ? (
           <img
             src={JSON.parse(tokenMetadata)?.image}
@@ -27,7 +27,7 @@ const EntryInfo = ({ entryNumber, tokenMetadata }: EntryInfoProps) => {
             className="w-full h-auto px-4"
           />
         ) : (
-          <span className="text-center text-neutral-500">No Token URI</span>
+          <span className="text-center text-neutral">No Token URI</span>
         )}
       </div>
     </HoverCardContent>

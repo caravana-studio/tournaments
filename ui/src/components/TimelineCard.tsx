@@ -25,46 +25,41 @@ const TimelineCard = ({
   completed = false,
 }: TimelineCardProps) => {
   return (
-    <div
-      className={`relative flex flex-col gap-2 ${
-        active ? "animate-pulse" : ""
-      }`}
-    >
+    <div className="relative flex flex-col gap-2">
       <Card
         variant={completed ? "default" : "outline"}
         className={`p-2 ${
-          completed ? "text-black bg-retro-green-dark" : "text-retro-green-dark"
-        } h-14 w-14 flex items-center justify-center z-20`}
-        borderColor={
-          completed ? "rgba(0, 218, 163, 1)" : "rgba(0, 140, 105, 1)"
-        }
+          completed ? "text-black bg-brand-muted" : "text-brand-muted"
+        } h-10 w-10 sm:h-14 sm:w-14 3xl:h-20 3xl:w-20 flex items-center justify-center z-20`}
       >
         {icon}
       </Card>
       {date && (
-        <div className="flex flex-col items-center font-astronaut">
+        <div className="flex flex-col items-center font-brand">
           <span className="text-xs">{format(date, "dd/MM")}</span>
           <span className="text-xs">{format(date, "HH:mm")}</span>
         </div>
       )}
-      {label && (
-        <span className="absolute -top-6 left-[calc(100%_-_0px)] w-[calc(100%_+_20px)] text-[14px] text-center font-astronaut whitespace-nowrap text-retro-green-dark">
-          {label}
-        </span>
-      )}
-      {duraton && (
-        <span className="absolute top-0 left-[calc(100%_-_0px)] w-[calc(100%_+_20px)] text-[14px] text-center whitespace-nowrap">
-          {duraton > 0 ? formatTime(duraton) : "Ended"}
-        </span>
-      )}
-      {showConnector && (
-        <motion.div
-          className="absolute top-7 left-[calc(100%_-_0px)] w-[calc(100%_+_20px)] h-0.5 border-t-4 border-dotted border-retro-green-dark z-10"
-          initial={{ width: 0 }}
-          animate={{ width: "calc(100% + 20px)" }}
-          transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-        />
-      )}
+      <div className={active ? "animate-pulse" : ""}>
+        {label && (
+          <span className="absolute -top-10 sm:-top-6 left-[calc(100%_-_0px)] w-[calc(100%_+_10px)] sm:w-[calc(100%_+_20px)] text-[10px] sm:text-[14px] 3xl:text-[16px] text-center font-brand whitespace-nowrap text-brand-muted">
+            {label}
+          </span>
+        )}
+        {duraton && (
+          <span className="absolute -top-6 sm:top-0 left-[calc(100%_-_0px)] w-[calc(100%_+_10px)] sm:w-[calc(100%_+_20px)] text-[12px] sm:text-[14px] 3xl:text-[16px] text-center whitespace-nowrap">
+            {duraton > 0 ? formatTime(duraton) : "Ended"}
+          </span>
+        )}
+        {showConnector && (
+          <motion.div
+            className="absolute top-5 sm:top-7 left-[calc(100%_-_0px)] w-[calc(100%_+_10px)] sm:w-[calc(100%_+_20px)] 3xl:w-[calc(100%_+_30px)] h-0.5 border-t-4 border-dotted border-brand-muted z-10"
+            initial={{ width: 0 }}
+            animate={{ width: "calc(100% + var(--timeline-extension, 10px))" }}
+            transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+          />
+        )}
+      </div>
     </div>
   );
 };

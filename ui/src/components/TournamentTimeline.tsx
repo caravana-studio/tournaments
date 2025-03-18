@@ -40,21 +40,25 @@ const TournamentTimeline = ({
     Number(BigInt(new Date().getTime()) / BigInt(1000));
 
   return (
-    <div className="flex flex-row items-center justify-center gap-20 mt-4">
+    <div className="flex flex-row items-center justify-center gap-10 sm:gap-20 mt-4">
       {type === "fixed" && (
         <TimelineCard
-          icon={<REGISTER />}
+          icon={
+            <span className="w-6 sm:w-8 3xl:w-10">
+              <REGISTER />
+            </span>
+          }
           date={createdDate}
           duraton={registrationPeriod}
           label="Registration"
           showConnector
           active={pulse ? !isStarted : false}
-          completed={isStarted}
+          completed={true}
         />
       )}
       <TimelineCard
         icon={
-          <span className="w-6">
+          <span className="w-4 sm:w-6 3xl:w-8">
             <START_FLAG />
           </span>
         }
@@ -63,11 +67,11 @@ const TournamentTimeline = ({
         label="Duration"
         showConnector
         active={pulse ? isStarted && !isEnded : false}
-        completed={isEnded}
+        completed={isStarted}
       />
       <TimelineCard
         icon={
-          <span className="w-6">
+          <span className="w-4 sm:w-6 3xl:w-8">
             <END_FLAG />
           </span>
         }
@@ -76,10 +80,14 @@ const TournamentTimeline = ({
         label="Submission"
         showConnector
         active={pulse ? isEnded && !isSubmissionEnded : false}
-        completed={isSubmissionEnded}
+        completed={isEnded}
       />
       <TimelineCard
-        icon={<LEADERBOARD />}
+        icon={
+          <span className="w-6 sm:w-8 3xl:w-10">
+            <LEADERBOARD />
+          </span>
+        }
         date={submissionEndDate}
         completed={isSubmissionEnded}
       />

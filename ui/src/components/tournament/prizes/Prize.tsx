@@ -13,6 +13,8 @@ import {
 import { TokenPrices } from "@/hooks/useEkuboPrices";
 import { TokenPrizes } from "@/lib/types";
 import { getTokenLogoUrl } from "@/lib/tokensMeta";
+import { useEffect, useState } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface PrizeProps {
   position: number;
@@ -21,92 +23,162 @@ interface PrizeProps {
 }
 
 const Prize = ({ position, prizes, prices }: PrizeProps) => {
-  const totalPrizesValueUSD = calculateTotalValue(prizes, prices);
   const totalPrizeNFTs = countTotalNFTs(prizes);
+  const [isMobileDialogOpen, setIsMobileDialogOpen] = useState(false);
+  const [allPricesFound, setAllPricesFound] = useState(false);
+  const totalPrizesValueUSD = calculateTotalValue(
+    prizes,
+    prices,
+    allPricesFound
+  );
 
-  return (
-    <HoverCard openDelay={50} closeDelay={0}>
-      <HoverCardTrigger asChild>
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: position * 0.1 }}
-          className="flex items-center gap-4 p-3 rounded-lg border border-retro-green/20 w-fit hover:cursor-pointer hover:bg-retro-green/25 hover:border-retro-green/30 border border-transparent rounded transition-all duration-200"
-        >
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-retro-green/20">
-            <span className="font-astronaut text-lg text-retro-green">
-              {position}
-              <sup>{getOrdinalSuffix(position)}</sup>
-            </span>
-          </div>
-          {totalPrizesValueUSD > 0 || totalPrizeNFTs > 0 ? (
-            <div className="flex flex-row items-center gap-2 font-astronaut text-lg">
-              {totalPrizesValueUSD > 0 && (
-                <span>${totalPrizesValueUSD.toFixed(2)}</span>
+  useEffect(() => {
+    const allPricesExist = Object.keys(prizes).every(
+      (symbol) => prices[symbol] !== undefined
+    );
+
+    setAllPricesFound(allPricesExist);
+  }, [prices, prizes]);
+
+  // Function to render prize details content
+  const renderPrizeDetails = () => (
+    <div className="space-y-2">
+      <h4 className="font-medium font-brand pt-4 px-4">
+        {position}
+        <sup>{getOrdinalSuffix(position)}</sup> Prize
+      </h4>
+      <div className="space-y-3">
+        {Object.entries(prizes).map(([symbol, prize]) => {
+          const hasPrice = prices[symbol];
+          const USDValue = calculatePrizeValue(prize, symbol, prices);
+          return (
+            <div
+              key={symbol}
+              className="flex justify-between items-center px-4"
+            >
+              {prize.type === "erc20" ? (
+                <div className="flex flex-row gap-1 items-center">
+                  <span>{`${(Number(prize.value) / 10 ** 18).toFixed(
+                    2
+                  )}`}</span>
+                  <img
+                    src={getTokenLogoUrl(prize.address)}
+                    className="w-6 h-6"
+                  />
+                </div>
+              ) : (
+                `${(prize.value as bigint[]).length} NFT${
+                  (prize.value as bigint[]).length === 1 ? "" : "s"
+                }`
               )}
-              {totalPrizesValueUSD > 0 && totalPrizeNFTs > 0 && (
-                <span className="text-retro-green/25">|</span>
-              )}
-              {totalPrizeNFTs > 0 && (
-                <span>
-                  {totalPrizeNFTs} NFT{totalPrizeNFTs === 1 ? "" : "s"}
-                </span>
+              {prize.type === "erc20" && hasPrice && (
+                <span className="text-neutral">~${USDValue.toFixed(2)}</span>
               )}
             </div>
-          ) : (
-            <span>No Prizes</span>
-          )}
-        </motion.div>
-      </HoverCardTrigger>
-      <HoverCardContent
-        className="w-48 p-4 text-sm z-50"
-        align="start"
-        side="top"
-        sideOffset={5}
-      >
-        <div className="space-y-2">
-          <h4 className="font-medium font-astronaut">
-            {position}
-            <sup>{getOrdinalSuffix(position)}</sup> Prize
-          </h4>
-          <div className="space-y-3">
-            {Object.entries(prizes).map(([symbol, prize]) => {
-              const USDValue = calculatePrizeValue(prize, symbol, prices);
-              return (
-                <div key={symbol} className="flex justify-between items-center">
-                  {prize.type === "erc20" ? (
-                    <div className="flex flex-row gap-1 items-center">
-                      <span>{`${Number(prize.value) / 10 ** 18}`}</span>
-                      <img
-                        src={getTokenLogoUrl(prize.address)}
-                        className="w-6 h-6"
-                      />
-                    </div>
-                  ) : (
-                    `${(prize.value as bigint[]).length} NFT${
-                      (prize.value as bigint[]).length === 1 ? "" : "s"
-                    }`
+          );
+        })}
+        {totalPrizesValueUSD > 0 && (
+          <div className="pt-2 border-t border-brand/50">
+            <div className="flex justify-between items-center px-4 pb-4">
+              <span className="font-brand">Total</span>
+              <span>${totalPrizesValueUSD.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop hover card (hidden on mobile) */}
+      <div className="hidden sm:block">
+        <HoverCard openDelay={50} closeDelay={0}>
+          <HoverCardTrigger asChild>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: position * 0.1 }}
+              className="flex items-center gap-4 p-2 sm:p-3 rounded-lg border border-brand/20 w-fit hover:cursor-pointer hover:bg-brand/25 hover:border-brand/30 transition-all duration-200"
+            >
+              <div className="flex items-center justify-center w-6 h-6 xl:w-8 xl:h-8 3xl:w-10 3xl:h-10 rounded-full bg-brand/20">
+                <span className="font-brand xl:text-lg 3xl:text-2xl text-brand">
+                  {position}
+                  <sup>{getOrdinalSuffix(position)}</sup>
+                </span>
+              </div>
+              {totalPrizesValueUSD > 0 || totalPrizeNFTs > 0 ? (
+                <div className="flex flex-row items-center gap-2 font-brand xl:text-lg 3xl:text-2xl">
+                  {totalPrizesValueUSD > 0 && (
+                    <span>{`${
+                      allPricesFound ? "$" : ""
+                    }${totalPrizesValueUSD.toFixed(2)}`}</span>
                   )}
-                  {prize.type === "erc20" && (
-                    <span className="text-neutral-500">
-                      ~${USDValue.toFixed(2)}
+                  {totalPrizesValueUSD > 0 && totalPrizeNFTs > 0 && (
+                    <span className="text-brand/25">|</span>
+                  )}
+                  {totalPrizeNFTs > 0 && (
+                    <span>
+                      {totalPrizeNFTs} NFT{totalPrizeNFTs === 1 ? "" : "s"}
                     </span>
                   )}
                 </div>
-              );
-            })}
+              ) : (
+                <span>No Prizes</span>
+              )}
+            </motion.div>
+          </HoverCardTrigger>
+          <HoverCardContent
+            className="w-48 p-0 text-sm z-50"
+            align="center"
+            side="top"
+            sideOffset={5}
+          >
+            {renderPrizeDetails()}
+          </HoverCardContent>
+        </HoverCard>
+      </div>
+
+      {/* Mobile clickable element (hidden on desktop) */}
+      <motion.div
+        className="sm:hidden flex items-center gap-4 p-2 rounded-lg border border-brand/20 w-fit hover:cursor-pointer hover:bg-brand/25 hover:border-brand/30 transition-all duration-200"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: position * 0.1 }}
+        onClick={() => setIsMobileDialogOpen(true)}
+      >
+        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-brand/20">
+          <span className="font-brand text-brand">
+            {position}
+            <sup>{getOrdinalSuffix(position)}</sup>
+          </span>
+        </div>
+        {totalPrizesValueUSD > 0 || totalPrizeNFTs > 0 ? (
+          <div className="flex flex-row items-center gap-2 font-brand">
             {totalPrizesValueUSD > 0 && (
-              <div className="pt-2 border-t border-retro-green/20">
-                <div className="flex justify-between items-center">
-                  <span className="font-astronaut">Total</span>
-                  <span>${totalPrizesValueUSD.toFixed(2)}</span>
-                </div>
-              </div>
+              <span>${totalPrizesValueUSD.toFixed(2)}</span>
+            )}
+            {totalPrizesValueUSD > 0 && totalPrizeNFTs > 0 && (
+              <span className="text-brand/25">|</span>
+            )}
+            {totalPrizeNFTs > 0 && (
+              <span>
+                {totalPrizeNFTs} NFT{totalPrizeNFTs === 1 ? "" : "s"}
+              </span>
             )}
           </div>
-        </div>
-      </HoverCardContent>
-    </HoverCard>
+        ) : (
+          <span>No Prizes</span>
+        )}
+      </motion.div>
+
+      {/* Mobile dialog for prize details */}
+      <Dialog open={isMobileDialogOpen} onOpenChange={setIsMobileDialogOpen}>
+        <DialogContent className="sm:hidden bg-black border border-brand p-0 rounded-lg max-w-[90vw] mx-auto">
+          {renderPrizeDetails()}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

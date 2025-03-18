@@ -1,5 +1,5 @@
 use tournaments::components::models::tournament::{
-    Tournament as TournamentModel, TokenType, Registration, PrizeType, Metadata, GameConfig,
+    Tournament as TournamentModel, TokenType, Registration, Prize, PrizeType, Metadata, GameConfig,
     EntryFee, EntryRequirement, QualificationProof,
 };
 use tournaments::components::models::schedule::{Schedule, Phase};
@@ -146,6 +146,7 @@ pub trait ITournamentMock<TState> {
     fn total_tournaments(self: @TState) -> u64;
     fn tournament(self: @TState, tournament_id: u64) -> TournamentModel;
     fn get_registration(self: @TState, tournament_id: u64, token_id: u64) -> Registration;
+    fn get_prize(self: @TState, prize_id: u64) -> Prize;
     fn tournament_entries(self: @TState, tournament_id: u64) -> u64;
     fn get_leaderboard(self: @TState, tournament_id: u64) -> Array<u64>;
     fn current_phase(self: @TState, tournament_id: u64) -> Phase;
@@ -244,6 +245,11 @@ pub trait IGameTokenMock<TState> {
     fn get_settings_details(self: @TState, settings_id: u32) -> SettingsDetails;
     fn settings_exists(self: @TState, settings_id: u32) -> bool;
     fn token_metadata(self: @TState, token_id: u64) -> TokenMetadata;
+    fn game_count(self: @TState) -> u64;
+    fn namespace(self: @TState) -> ByteArray;
+    fn score_model(self: @TState) -> ByteArray;
+    fn score_attribute(self: @TState) -> ByteArray;
+    fn settings_model(self: @TState) -> ByteArray;
 
     // GameMock
     fn start_game(ref self: TState, game_id: u64);

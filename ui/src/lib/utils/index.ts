@@ -3,7 +3,7 @@ import { ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { BigNumberish, shortString } from "starknet";
 import { Prize } from "@/generated/models.gen";
-import { TOKEN_ADDRESSES, TOKEN_ICONS, ITEMS } from "@/lib/constants";
+import { TOKEN_ADDRESSES, TOKEN_ICONS } from "@/lib/constants";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -15,7 +15,7 @@ export function formatNumber(num: number): string {
   } else if (Math.abs(num) >= 1000) {
     return parseFloat((num / 1000).toFixed(2)) + "k";
   } else if (Math.abs(num) >= 10) {
-    return num.toFixed(0);
+    return num.toFixed(2);
   } else if (Math.abs(num) > 0) {
     return num.toFixed(2);
   } else {
@@ -90,7 +90,6 @@ export const formatTime = (seconds: number): string => {
     return `${seconds} Sec${seconds > 1 ? "s" : ""}`;
   }
 };
-
 // Add a utility function to check if a date is before another date
 export function isBefore(date1: Date, date2: Date) {
   return date1.getTime() < date2.getTime();
@@ -169,22 +168,11 @@ export const getRandomInt = (min: number, max: number): number => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
-export function getItemKeyFromValue(searchValue: string): string | null {
-  const entry = Object.entries(ITEMS).find(
-    ([_key, value]) => value === searchValue
-  );
-  return entry ? entry[0] : null;
-}
-
 export function getTokenKeyFromValue(searchValue: string): string | null {
   const entry = Object.entries(TOKEN_ADDRESSES).find(
     ([_key, value]) => value === searchValue
   );
   return entry ? entry[0] : null;
-}
-
-export function getItemValueFromKey(key: number): string | null {
-  return ITEMS[key];
 }
 
 export const getPrizesByToken = (prizes: Prize[]) => {
@@ -386,4 +374,69 @@ export const adjustColorOpacity = (color: string, opacity: number): string => {
   // If the format isn't recognized, return the original color
   console.warn(`Color format not recognized for: ${color}`);
   return color;
+};
+
+export const calculateDistribution = (
+  positions: number,
+  weight: number,
+  creatorFee?: number,
+  gameFee?: number
+): number[] => {
+  // Handle invalid inputs
+  if (positions <= 0) {
+    return [];
+  }
+
+  const safeCreatorFee = creatorFee ?? 0;
+  const safeGameFee = gameFee ?? 0;
+  const availablePercentage = 100 - safeCreatorFee - safeGameFee;
+
+  // If there's nothing to distribute, return array of zeros
+  if (availablePercentage <= 0) {
+    return Array(positions).fill(0);
+  }
+
+  // First calculate raw percentages
+  const rawDistributions: number[] = [];
+  for (let i = 0; i < positions; i++) {
+    const share = availablePercentage * Math.pow(1 - i / positions, weight);
+    rawDistributions.push(share);
+  }
+
+  // Normalize to get percentages
+  const total = rawDistributions.reduce((a, b) => a + b, 0);
+
+  // Prevent division by zero
+  if (total === 0) {
+    return Array(positions).fill(0);
+  }
+
+  const normalizedDistributions = rawDistributions.map(
+    (d) => (d * availablePercentage) / total
+  );
+
+  // Round down to whole numbers
+  const roundedDistributions = normalizedDistributions.map((d) =>
+    Math.floor(d)
+  );
+
+  // Calculate the remaining points to distribute (should be less than positions)
+  const remainingPoints =
+    availablePercentage - roundedDistributions.reduce((a, b) => a + b, 0);
+
+  // Distribute remaining points based on decimal parts
+  const decimalParts = normalizedDistributions.map((d, i) => ({
+    index: i,
+    decimal: d - Math.floor(d),
+  }));
+
+  // Sort by decimal part descending
+  decimalParts.sort((a, b) => b.decimal - a.decimal);
+
+  // Add one point to each position with highest decimal until we reach 100%
+  for (let i = 0; i < remainingPoints; i++) {
+    roundedDistributions[decimalParts[i].index]++;
+  }
+
+  return roundedDistributions;
 };

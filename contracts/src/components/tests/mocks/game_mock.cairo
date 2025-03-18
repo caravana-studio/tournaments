@@ -9,7 +9,6 @@ trait IGameTokenMock<TContractState> {
         description: ByteArray,
         exists: bool,
     );
-    fn score_model_and_attribute(self: @TContractState) -> (felt252, felt252);
 }
 
 #[starknet::interface]
@@ -146,10 +145,6 @@ mod game_mock {
                     @SettingsDetails { id: settings_id, name, description, exists: true },
                 );
         }
-
-        fn score_model_and_attribute(self: @ContractState) -> (felt252, felt252) {
-            ('Score', 'score')
-        }
     }
 
     #[abi(embed_v0)]
@@ -167,6 +162,9 @@ mod game_mock {
                     GAME_GENRE(),
                     GAME_IMAGE(),
                     DEFAULT_NS(),
+                    "Score",
+                    "score",
+                    "SettingsDetails",
                 );
             self.game.set_settings(0, 'Test', "This is a test");
         }

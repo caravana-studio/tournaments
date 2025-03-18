@@ -29,10 +29,10 @@ get_contract_address () {
   echo $RESULT
 }
 
-export TOURNAMENTS_ADDRESS=$(get_contract_address "tournaments-tournament_mock")
-export GAME_ADDRESS=$(get_contract_address "tournaments-game_mock")
-export TEST_ERC20=$(get_contract_address "tournaments-erc20_mock")
-export TEST_ERC721=$(get_contract_address "tournaments-erc721_mock")
+export TOURNAMENTS_ADDRESS=$(get_contract_address "budokan_v_1_0_4-tournament_mock")
+export GAME_ADDRESS=$(get_contract_address "budokan_v_1_0_4-game_mock")
+export TEST_ERC20=$(get_contract_address "budokan_v_1_0_4-erc20_mock")
+export TEST_ERC721=$(get_contract_address "budokan_v_1_0_4-erc721_mock")
 
 #-----------------
 # initialize tournament
@@ -46,7 +46,7 @@ echo "TEST_ERC721: $TEST_ERC721"
 echo "Waiting 10 seconds before execution..."
 sleep 10
 
-sozo -P slot execute tournament_mock initializer --calldata 0,1,$TEST_ERC20,$TEST_ERC721
+sozo -P slot execute tournament_mock initializer 0 1 $TEST_ERC20 $TEST_ERC721
 sozo -P slot execute game_mock initializer
 
 #------------------

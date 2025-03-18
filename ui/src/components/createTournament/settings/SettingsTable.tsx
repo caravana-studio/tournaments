@@ -10,7 +10,7 @@ const SettingsTable = ({ hasSettings, settings }: SettingsTableProps) => {
   // If game doesn't exist in config or has no settings
   if (!hasSettings) {
     return (
-      <div className="border border-retro-green-dark rounded-lg overflow-hidden w-3/4 p-4">
+      <div className="border border-brand-muted rounded-lg overflow-hidden w-3/4 p-4">
         <div className="flex flex-col items-center justify-center text-center gap-2 text-muted-foreground">
           <div className="text-sm">No settings available for this game yet</div>
           <div className="text-xs">Default configuration will be used</div>
@@ -20,19 +20,16 @@ const SettingsTable = ({ hasSettings, settings }: SettingsTableProps) => {
   }
 
   return (
-    <div className="border border-retro-green-dark rounded-lg overflow-hidden w-3/4">
+    <div className="border border-brand-muted rounded-lg overflow-hidden w-3/4">
       <table className="w-full">
-        <tbody className="divide-y divide-retro-green-dark">
+        <tbody className="divide-y divide-brand-muted">
           {settings.map((setting, index) => (
-            <tr
-              key={index}
-              className="hover:bg-retro-green/5 transition-colors"
-            >
+            <tr key={index} className="hover:bg-brand/5 transition-colors">
               {/* <td className="p-2 pl-4">
                 <img
                   src={`/icons/${game}/${item.icon}`}
                   alt={item.label}
-                  className="w-6 h-6 text-retro-green"
+                  className="w-6 h-6 text-brand"
                 />
               </td> */}
               <td className="p-2 text-sm font-medium">

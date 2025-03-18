@@ -11,7 +11,7 @@ const NotFound: React.FC<NotFoundProps> = ({ message = "Page not found" }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="w-3/4 px-20 pt-20 mx-auto flex flex-col gap-5">
+    <div className="w-3/4 mx-auto flex flex-col gap-5">
       <div className="flex flex-row justify-between">
         <Button variant="outline" onClick={() => navigate("/")}>
           <ARROW_LEFT />
@@ -19,10 +19,10 @@ const NotFound: React.FC<NotFoundProps> = ({ message = "Page not found" }) => {
         </Button>
       </div>
       <div className="flex flex-col items-center gap-2">
-        <span className="font-astronaut text-3xl text-retro-red">
+        <span className="font-brand text-3xl text-retro-red">
           Oops! {message}
         </span>
-        <p className="text-retro-green-dark">
+        <p className="text-brand-muted">
           The page you're looking for doesn't exist or has been removed.
         </p>
       </div>

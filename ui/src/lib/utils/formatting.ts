@@ -14,12 +14,10 @@ import {
   EntryFee,
   PrizeClaim,
   Leaderboard,
+  QualificationProofEnum,
 } from "@/generated/models.gen";
 import { PositionPrizes, TokenPrizes } from "@/lib/types";
 import { TokenPrices } from "@/hooks/useEkuboPrices";
-
-const SECONDS_IN_DAY = 86400;
-const SECONDS_IN_HOUR = 3600;
 
 export const processTournamentData = (
   formData: TournamentFormData,
@@ -27,50 +25,69 @@ export const processTournamentData = (
   tournamentCount: number
 ): Tournament => {
   const startTimestamp = Math.floor(
-    formData.startTime.getTime() / 1000 -
-      formData.startTime.getTimezoneOffset() * 60
+    Date.UTC(
+      formData.startTime.getUTCFullYear(),
+      formData.startTime.getUTCMonth(),
+      formData.startTime.getUTCDate(),
+      formData.startTime.getUTCHours(),
+      formData.startTime.getUTCMinutes(),
+      formData.startTime.getUTCSeconds()
+    ) / 1000
   );
 
-  const currentTime = Number(BigInt(new Date().getTime()) / 1000n + 60n);
+  const currentTime = Math.floor(Date.now() / 1000) + 60;
 
-  // End time is start time + duration in days
-  const endTimestamp = startTimestamp + formData.duration * SECONDS_IN_DAY;
+  // End time is start time + duration in seconds
+  const endTimestamp = startTimestamp + formData.duration;
 
   // Process entry requirement based on type and requirement
-  let entryRequirement;
+  let entryRequirementType;
   if (formData.enableGating && formData.gatingOptions?.type) {
     switch (formData.gatingOptions.type) {
       case "token":
-        entryRequirement = new CairoCustomEnum({
+        entryRequirementType = new CairoCustomEnum({
           token: formData.gatingOptions.token,
           tournament: undefined,
           allowlist: undefined,
         });
         break;
       case "tournament":
-        entryRequirement = new CairoCustomEnum({
+        entryRequirementType = new CairoCustomEnum({
           token: undefined,
-          tournament: {
+          tournament: new CairoCustomEnum({
             winners:
               formData.gatingOptions.tournament?.requirement === "won"
                 ? formData.gatingOptions.tournament.tournaments.map((t) => t.id)
-                : [],
+                : undefined,
             participants:
               formData.gatingOptions.tournament?.requirement === "participated"
                 ? formData.gatingOptions.tournament.tournaments.map((t) => t.id)
-                : [],
-          },
+                : undefined,
+          }),
           allowlist: undefined,
         });
         break;
       case "addresses":
-        entryRequirement = new CairoCustomEnum({
+        entryRequirementType = new CairoCustomEnum({
           token: undefined,
           tournament: undefined,
           allowlist: formData.gatingOptions.addresses,
         });
         break;
     }
+  }
+
+  let entryRequirement;
+  if (formData.enableGating && entryRequirementType) {
+    entryRequirement = {
+      entry_limit: formData.enableEntryLimit
+        ? new CairoOption<BigNumberish>(
+            CairoOptionVariant.Some,
+            formData.gatingOptions?.entry_limit
+          )
+        : new CairoOption<BigNumberish>(CairoOptionVariant.None),
+      entry_requirement_type: entryRequirementType,
+    };
   }
 
   return {
@@ -94,7 +111,7 @@ export const processTournamentData = (
         start: startTimestamp,
         end: endTimestamp,
       },
-      submission_duration: Number(formData.submissionPeriod) * SECONDS_IN_HOUR,
+      submission_duration: Number(formData.submissionPeriod),
     },
     game_config: {
       address: addAddressPadding(formData.game),
@@ -167,21 +184,11 @@ export const getSubmittableScores = (
     ...score,
     position: index + 1,
   }));
-  // if no scores have been submitted then we can submit the whole leaderboard in reverse order
-  const newSubmissions = leaderboardWithPositions
-    .sort((a, b) => {
-      const scoreComparison = Number(a.score) - Number(b.score);
-
-      if (scoreComparison === 0) {
-        return Number(b.entry_number) - Number(a.entry_number);
-      }
-
-      return scoreComparison;
-    })
-    .map((score) => ({
-      tokenId: score.game_token_id,
-      position: score.position,
-    }));
+  // if no scores have been submitted then we can submit the whole leaderboard
+  const newSubmissions = leaderboardWithPositions.map((score) => ({
+    tokenId: score.game_token_id,
+    position: score.position,
+  }));
   if (submittedTokenIds.length === 0) {
     return newSubmissions;
   } else {
@@ -305,7 +312,7 @@ export const getClaimablePrizes = (
   );
   const claimedEntryFeePositions = claimedPrizes.map((prize) =>
     prize.prize_type?.activeVariant() === "EntryFees"
-      ? prize.prize_type.variant.EntryFees.Position
+      ? prize.prize_type.variant.EntryFees?.variant?.Position
       : null
   );
   const claimedSponsoredPrizeKeys = claimedPrizes.map((prize) =>
@@ -469,21 +476,34 @@ export const calculatePrizeValue = (
 ): number => {
   if (prize.type !== "erc20") return 0;
 
-  const price = prices[symbol] || 1;
-  const amount = Number(prize.value);
-  return Number(price * amount) / 10 ** 18;
+  const price = prices[symbol];
+  const amount = Number(prize.value) / 10 ** 18;
+
+  // If no price is available, just return the token amount
+  if (price === undefined) return amount;
+
+  // Otherwise calculate the value using the price
+  return price * amount;
 };
 
 export const calculateTotalValue = (
   groupedPrizes: TokenPrizes,
-  prices: TokenPrices
+  prices: TokenPrices,
+  allPricesFound: boolean
 ) => {
+  if (!allPricesFound) {
+    return 0;
+  }
+
   return Object.entries(groupedPrizes)
     .filter(([_, prize]) => prize.type === "erc20")
     .reduce((total, [symbol, prize]) => {
-      const price = prices[symbol] || 1;
-      const amount = Number(prize.value);
-      return total + Number(price * amount) / 10 ** 18;
+      const price = prices[symbol];
+      const amount = Number(prize.value) / 10 ** 18;
+
+      if (price === undefined) return total;
+
+      return total + price * amount;
     }, 0);
 };
 
@@ -498,38 +518,68 @@ export const countTotalNFTs = (groupedPrizes: TokenPrizes) => {
 export const processTournamentFromSql = (tournament: any): Tournament => {
   let entryRequirement;
   if (tournament["entry_requirement"] === "Some") {
+    let entryRequirementType: CairoCustomEnum;
+
+    console.log(
+      tournament[
+        "entry_requirement.Some.entry_requirement_type.tournament.winners"
+      ]
+    );
     switch (tournament["entry_requirement.Some"]) {
       case "token":
-        entryRequirement = new CairoCustomEnum({
-          token: tournament["entry_requirement.Some.token"],
+        entryRequirementType = new CairoCustomEnum({
+          token:
+            tournament["entry_requirement.Some.entry_requirement_type.token"],
           tournament: undefined,
           allowlist: undefined,
         });
         break;
       case "tournament":
-        entryRequirement = new CairoCustomEnum({
+        entryRequirementType = new CairoCustomEnum({
           token: undefined,
-          tournament: {
+          tournament: new CairoCustomEnum({
             winners:
-              tournament["entry_requirement.Some.tournament"] === "winners"
-                ? tournament["entry_requirement.Some.tournament.winners"]
-                : [],
+              tournament[
+                "entry_requirement.Some.entry_requirement_type.tournament"
+              ] === "winners"
+                ? tournament[
+                    "entry_requirement.Some.entry_requirement_type.tournament.winners"
+                  ]
+                : undefined,
             participants:
-              tournament["entry_requirement.Some.tournament"] === "participants"
-                ? tournament["entry_requirement.Some.tournament.participants"]
-                : [],
-          },
+              tournament[
+                "entry_requirement.Some.entry_requirement_type.tournament"
+              ] === "participants"
+                ? tournament[
+                    "entry_requirement.Some.entry_requirement_type.tournament.participants"
+                  ]
+                : undefined,
+          }),
           allowlist: undefined,
         });
         break;
       case "allowlist":
-        entryRequirement = new CairoCustomEnum({
+        entryRequirementType = new CairoCustomEnum({
           token: undefined,
           tournament: undefined,
-          allowlist: tournament["entry_requirement.Some.allowlist"],
+          allowlist:
+            tournament[
+              "entry_requirement.Some.entry_requirement_type.allowlist"
+            ],
         });
         break;
+      default:
+        entryRequirementType = new CairoCustomEnum({
+          token: undefined,
+          tournament: undefined,
+          allowlist: [],
+        });
     }
+
+    entryRequirement = {
+      entry_limit: tournament["entry_requirement.Some.entry_limit"],
+      entry_requirement_type: entryRequirementType,
+    };
   }
 
   return {
@@ -624,4 +674,39 @@ export const processPrizesFromSql = (
             Number(a.payout_position) - Number(b.payout_position)
         )
     : null;
+};
+
+export const processQualificationProof = (
+  requirementVariant: string,
+  proof: any
+): CairoOption<QualificationProofEnum> => {
+  if (requirementVariant === "tournament") {
+    const qualificationProof = new CairoCustomEnum({
+      Tournament: {
+        tournament_id: proof.tournamentId,
+        token_id: proof.tokenId,
+        position: proof.position,
+      },
+      NFT: undefined,
+    }) as QualificationProofEnum;
+    return new CairoOption(CairoOptionVariant.Some, qualificationProof);
+  }
+
+  if (requirementVariant === "token") {
+    return new CairoOption(
+      CairoOptionVariant.Some,
+      new CairoCustomEnum({
+        Tournament: undefined,
+        NFT: {
+          token_id: {
+            low: proof.tokenId,
+            high: "0",
+          },
+        },
+      })
+    );
+  }
+
+  // Default return for all other cases
+  return new CairoOption(CairoOptionVariant.None);
 };

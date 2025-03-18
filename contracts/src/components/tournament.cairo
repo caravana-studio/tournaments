@@ -2,7 +2,7 @@
 
 use starknet::ContractAddress;
 use tournaments::components::models::tournament::{
-    Tournament as TournamentModel, TokenType, Registration, PrizeType, Metadata, GameConfig,
+    Tournament as TournamentModel, TokenType, Registration, Prize, PrizeType, Metadata, GameConfig,
     EntryFee, EntryRequirement, QualificationProof,
 };
 use tournaments::components::models::schedule::{Schedule, Phase};
@@ -41,6 +41,7 @@ trait ITournament<TState> {
     fn total_tournaments(self: @TState) -> u64;
     fn tournament(self: @TState, tournament_id: u64) -> TournamentModel;
     fn get_registration(self: @TState, tournament_id: u64, token_id: u64) -> Registration;
+    fn get_prize(self: @TState, prize_id: u64) -> Prize;
     fn tournament_entries(self: @TState, tournament_id: u64) -> u32;
     fn is_token_registered(self: @TState, address: ContractAddress) -> bool;
     fn register_token(ref self: TState, address: ContractAddress, token_type: TokenType);
@@ -69,6 +70,7 @@ pub mod tournament_component {
         Tournament as TournamentModel, Registration, Leaderboard, Prize, Token, TournamentConfig,
         TokenType, TournamentType, ERC20Data, ERC721Data, PrizeType, Role, PrizeClaim, Metadata,
         GameConfig, EntryFee, EntryRequirement, QualificationProof, TournamentQualification,
+        EntryRequirementType, QualificationEntries, Qualification,
     };
     use tournaments::components::models::schedule::{Schedule, Phase};
     use tournaments::components::interfaces::{WorldTrait, WorldImpl};
@@ -176,6 +178,12 @@ pub mod tournament_component {
             tournament.schedule.current_phase(get_block_timestamp())
         }
 
+        fn get_prize(self: @ComponentState<TContractState>, prize_id: u64) -> Prize {
+            let world = WorldTrait::storage(self.get_contract().world_dispatcher(), @DEFAULT_NS());
+            let store: Store = StoreTrait::new(world);
+            store.get_prize(prize_id)
+        }
+
         /// @title Create tournament
         /// @notice Allows anyone to create a tournament.
         /// @param self A reference to the ContractState object.
@@ -259,7 +267,7 @@ pub mod tournament_component {
             if let Option::Some(entry_requirement) = tournament.entry_requirement {
                 self
                     ._validate_entry_requirement(
-                        store, entry_requirement, player_address, qualification,
+                        ref store, tournament_id, entry_requirement, player_address, qualification,
                     );
             }
 
@@ -335,7 +343,12 @@ pub mod tournament_component {
             // validate submission
             self
                 ._validate_score_submission(
-                    @tournament, @registration, leaderboard.span(), submitted_score, position,
+                    @tournament,
+                    @registration,
+                    leaderboard.span(),
+                    submitted_score,
+                    position,
+                    token_id,
                 );
 
             // update leaderboard
@@ -418,7 +431,12 @@ pub mod tournament_component {
             store
                 .set_prize(
                     @Prize {
-                        id, tournament_id, token_address, token_type, payout_position: position,
+                        id,
+                        tournament_id,
+                        token_address,
+                        token_type,
+                        payout_position: position,
+                        sponsor_address: get_caller_address(),
                     },
                 );
 
@@ -832,6 +850,30 @@ pub mod tournament_component {
         }
 
         #[inline(always)]
+        fn _assert_under_entry_limit(
+            self: @ComponentState<TContractState>,
+            ref store: Store,
+            tournament_id: u64,
+            qualification: Qualification,
+            entry_limit: u32,
+        ) {
+            let qualification_entries = store
+                .get_qualification_entries(tournament_id, qualification);
+            let current_entries = qualification_entries.entry_count;
+            assert!(
+                current_entries < entry_limit,
+                "Tournament: Maximum qualified entries reached for tournament {}",
+                tournament_id,
+            );
+            store
+                .set_qualification_entries(
+                    @QualificationEntries {
+                        tournament_id, qualification, entry_count: current_entries + 1,
+                    },
+                );
+        }
+
+        #[inline(always)]
         fn _assert_gated_token_owner(
             self: @ComponentState<TContractState>, token: ContractAddress, token_id: u256,
         ) {
@@ -848,8 +890,8 @@ pub mod tournament_component {
             store: Store,
             entry_requirement: EntryRequirement,
         ) {
-            match entry_requirement {
-                EntryRequirement::token(token) => {
+            match entry_requirement.entry_requirement_type {
+                EntryRequirementType::token(token) => {
                     let token_model = store.get_token(token);
                     let token_address: felt252 = token.into();
                     assert!(
@@ -858,7 +900,7 @@ pub mod tournament_component {
                         token_address,
                     )
                 },
-                EntryRequirement::tournament(tournament_type) => {
+                EntryRequirementType::tournament(tournament_type) => {
                     match tournament_type {
                         TournamentType::winners(tournament_ids) => {
                             let mut index = 0;
@@ -882,7 +924,7 @@ pub mod tournament_component {
                         },
                     }
                 },
-                EntryRequirement::allowlist(_) => {},
+                EntryRequirementType::allowlist(_) => {},
             }
         }
 
@@ -893,8 +935,8 @@ pub mod tournament_component {
             entry_requirement: EntryRequirement,
             qualifying_token_id: Option<u256>,
         ) {
-            match entry_requirement {
-                EntryRequirement::token(token_address) => {
+            match entry_requirement.entry_requirement_type {
+                EntryRequirementType::token(token_address) => {
                     match qualifying_token_id {
                         Option::Some(token_id) => {
                             self._assert_gated_token_owner(token_address, token_id);
@@ -909,7 +951,7 @@ pub mod tournament_component {
                         },
                     }
                 },
-                EntryRequirement::tournament(tournament_type) => {
+                EntryRequirementType::tournament(tournament_type) => {
                     match qualifying_token_id {
                         Option::Some(token_id) => {
                             self
@@ -925,7 +967,7 @@ pub mod tournament_component {
                         },
                     }
                 },
-                EntryRequirement::allowlist(addresses) => {
+                EntryRequirementType::allowlist(addresses) => {
                     self._assert_qualifying_address(addresses);
                 },
             }
@@ -1376,6 +1418,7 @@ pub mod tournament_component {
             current_leaderboard: Span<u64>,
             submitted_score: u32,
             submitted_position: u8,
+            token_id: u64,
         ) {
             let schedule = *tournament.schedule;
             assert!(
@@ -1413,30 +1456,50 @@ pub mod tournament_component {
             // if the score being submitted is for a position already on the leaderboard
             if position_index < current_leaderboard.len() {
                 // validate it's higher
-                let current_score_at_position = game_dispatcher
-                    .score(*current_leaderboard.at(position_index));
+                let game_id_at_position = *current_leaderboard.at(position_index);
+                let score_at_position = game_dispatcher.score(game_id_at_position);
 
                 assert!(
-                    submitted_score > current_score_at_position,
+                    submitted_score >= score_at_position,
                     "Tournament: Score {} is less than current score of {} at position {}",
                     submitted_score,
-                    current_score_at_position,
+                    score_at_position,
                     submitted_position,
                 );
+
+                if submitted_score == score_at_position {
+                    assert!(
+                        token_id < game_id_at_position,
+                        "Tournament: Tie goes to game with lower id. Submitted game id {} is higher than current game id {}",
+                        token_id,
+                        game_id_at_position,
+                    );
+                }
             }
 
             // if score is being submitted for any position other than first
             if submitted_position > 1 {
-                // validate it is less than the score above it.
-                let current_score_above_position = game_dispatcher
-                    .score(*current_leaderboard.at(position_index - 1));
+                // validate it is less than or equal to the score above it
+                let position_above = position_index - 1;
+                let game_id_above = *current_leaderboard.at(position_above);
+                let current_score_above_position = game_dispatcher.score(game_id_above);
 
                 assert!(
-                    submitted_score < current_score_above_position,
+                    submitted_score <= current_score_above_position,
                     "Tournament: Score {} qualifies for higher position than {}",
                     submitted_score,
                     submitted_position,
                 );
+
+                // If scores are equal, ensure the game ID is higher (lower priority in case of tie)
+                if submitted_score == current_score_above_position {
+                    assert!(
+                        token_id > game_id_above,
+                        "Tournament: For equal scores, game id {} should be higher than game id above {}",
+                        token_id,
+                        game_id_above,
+                    );
+                }
             }
         }
 
@@ -1532,36 +1595,56 @@ pub mod tournament_component {
 
         fn _validate_entry_requirement(
             self: @ComponentState<TContractState>,
-            store: Store,
+            ref store: Store,
+            tournament_id: u64,
             entry_requirement: EntryRequirement,
             player_address: ContractAddress,
             qualification_proof: Option<QualificationProof>,
         ) {
-            match entry_requirement {
-                EntryRequirement::tournament(tournament_type) => {
+            match entry_requirement.entry_requirement_type {
+                EntryRequirementType::tournament(tournament_type) => {
                     self
                         ._validate_tournament_qualification(
-                            store, tournament_type, qualification_proof, player_address,
+                            ref store,
+                            tournament_id,
+                            tournament_type,
+                            qualification_proof,
+                            player_address,
+                            entry_requirement.entry_limit,
                         );
                 },
-                EntryRequirement::token(token_address) => {
+                EntryRequirementType::token(token_address) => {
                     self
                         ._validate_nft_qualification(
-                            token_address, player_address, qualification_proof,
+                            ref store,
+                            tournament_id,
+                            token_address,
+                            player_address,
+                            qualification_proof,
+                            entry_requirement.entry_limit,
                         );
                 },
-                EntryRequirement::allowlist(addresses) => {
-                    self._validate_allowlist_qualification(addresses, player_address);
+                EntryRequirementType::allowlist(addresses) => {
+                    self
+                        ._validate_allowlist_qualification(
+                            ref store,
+                            tournament_id,
+                            addresses,
+                            player_address,
+                            entry_requirement.entry_limit,
+                        );
                 },
             }
         }
 
         fn _validate_tournament_qualification(
             self: @ComponentState<TContractState>,
-            store: Store,
+            ref store: Store,
+            tournament_id: u64,
             tournament_type: TournamentType,
             qualification_proof: Option<QualificationProof>,
             player_address: ContractAddress,
+            entry_limit: Option<u32>,
         ) {
             let qualification = match qualification_proof {
                 Option::Some(proof) => proof,
@@ -1596,29 +1679,58 @@ pub mod tournament_component {
                     qualification.token_id.into(),
                     player_address,
                 );
+
+            // check if entry limit is set
+            match entry_limit {
+                Option::Some(limit) => {
+                    let tournament_qualification = Qualification::tournament(qualification);
+                    // assert under entry limit
+                    self
+                        ._assert_under_entry_limit(
+                            ref store, tournament_id, tournament_qualification, limit,
+                        );
+                },
+                Option::None => {},
+            };
         }
 
         fn _validate_nft_qualification(
             self: @ComponentState<TContractState>,
+            ref store: Store,
+            tournament_id: u64,
             token_address: ContractAddress,
             player_address: ContractAddress,
             qualification_proof: Option<QualificationProof>,
+            entry_limit: Option<u32>,
         ) {
             let qualification = match qualification_proof {
                 Option::Some(proof) => proof,
                 Option::None => panic!("Tournament: Token ID from qualifying NFT required"),
             };
 
-            match qualification {
-                QualificationProof::NFT(nft) => {
-                    let erc721_dispatcher = IERC721Dispatcher { contract_address: token_address };
-                    assert!(
-                        erc721_dispatcher.owner_of(nft.token_id) == player_address,
-                        "Tournament: Player does not own required token",
-                    );
+            let qualification = match qualification {
+                QualificationProof::NFT(qual) => qual,
+                _ => panic!("Tournament: Provided qualification proof is not of type 'Token'"),
+            };
+
+            let erc721_dispatcher = IERC721Dispatcher { contract_address: token_address };
+            assert!(
+                erc721_dispatcher.owner_of(qualification.token_id) == player_address,
+                "Tournament: Player does not own required token",
+            );
+
+            // check if entry limit is set
+            match entry_limit {
+                Option::Some(limit) => {
+                    let token_qualification = Qualification::token(qualification);
+                    // assert under entry limit
+                    self
+                        ._assert_under_entry_limit(
+                            ref store, tournament_id, token_qualification, limit,
+                        );
                 },
-                _ => { panic!("Tournament: Provided qualification proof is not of type 'NFT'"); },
-            }
+                Option::None => {},
+            };
         }
 
         fn _is_qualifying_tournament(
@@ -1641,13 +1753,29 @@ pub mod tournament_component {
         #[inline(always)]
         fn _validate_allowlist_qualification(
             self: @ComponentState<TContractState>,
+            ref store: Store,
+            tournament_id: u64,
             allowlist_addresses: Span<ContractAddress>,
             player_address: ContractAddress,
+            entry_limit: Option<u32>,
         ) {
             assert!(
                 self._contains_address(allowlist_addresses, player_address),
                 "Tournament: Player not in allowlist",
             );
+
+            // check if entry limit is set
+            match entry_limit {
+                Option::Some(limit) => {
+                    let allowlist_qualification = Qualification::allowlist(player_address);
+                    // assert under entry limit
+                    self
+                        ._assert_under_entry_limit(
+                            ref store, tournament_id, allowlist_qualification, limit,
+                        );
+                },
+                Option::None => {},
+            };
         }
 
         fn _contains_address(

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { WEDGE_LEFT, WEDGE_RIGHT } from "@/components/Icons";
+import { useEffect } from "react";
 
 interface PaginationProps {
   currentPage: number;
@@ -19,35 +20,26 @@ const Pagination = ({
   const renderPageNumbers = () => {
     const pages: (number | string)[] = [];
 
-    if (totalPages <= 6) {
-      // If 6 or fewer pages, show all without padding
+    // Get screen width using window.innerWidth
+    const isSmallScreen = window.innerWidth < 1280; // lg breakpoint
+    const maxVisiblePages = isSmallScreen ? 3 : 6;
+
+    if (totalPages <= maxVisiblePages) {
+      // If fewer pages than max, show all without padding
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always show 6 elements for larger page counts
-      if (currentPage <= 4) {
-        pages.push(1, 2, 3, 4, 5, "...", totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(
-          1,
-          "...",
-          totalPages - 4,
-          totalPages - 3,
-          totalPages - 2,
-          totalPages - 1,
-          totalPages
-        );
+      // Adjust visible pages based on screen size
+      if (currentPage <= 2) {
+        // Near start
+        pages.push(1, 2, "...", totalPages);
+      } else if (currentPage >= totalPages - 1) {
+        // Near end
+        pages.push(1, "...", totalPages - 1, totalPages);
       } else {
-        pages.push(
-          1,
-          "...",
-          currentPage - 1,
-          currentPage,
-          currentPage + 1,
-          "...",
-          totalPages
-        );
+        // Middle
+        pages.push(1, "...", currentPage, "...", totalPages);
       }
     }
 
@@ -56,7 +48,7 @@ const Pagination = ({
         return (
           <span
             key={`ellipsis-${index}`}
-            className="px-1 text-retro-green shrink-0"
+            className="sm:px-1 text-brand shrink-0"
           >
             {page}
           </span>
@@ -77,11 +69,22 @@ const Pagination = ({
     });
   };
 
+  // Add a useEffect to handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      // Force re-render when window is resized
+      setCurrentPage(currentPage);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [currentPage, setCurrentPage]);
+
   return (
     <div
       className={`
       flex flex-row gap-1 justify-center items-center
-      ${totalPages <= 6 ? "w-fit" : "w-[200px]"}
+      ${totalPages <= 3 ? "w-fit" : "w-[150px] lg:w-[200px] 3xl:w-[250px]"}
     `}
     >
       <Button
@@ -91,9 +94,7 @@ const Pagination = ({
         disabled={currentPage === 1}
         className="shrink-0"
       >
-        <span className={`w-3 h-3`}>
-          <WEDGE_LEFT />
-        </span>
+        <WEDGE_LEFT />
       </Button>
 
       <div className="flex flex-row gap-1 justify-center items-center">
@@ -107,9 +108,7 @@ const Pagination = ({
         disabled={currentPage === totalPages}
         className="shrink-0"
       >
-        <span className={`w-3 h-3`}>
-          <WEDGE_RIGHT />
-        </span>
+        <WEDGE_RIGHT />
       </Button>
     </div>
   );

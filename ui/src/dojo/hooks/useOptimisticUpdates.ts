@@ -38,7 +38,7 @@ const applyModelUpdate = <T extends { [key: string]: any }>(
 };
 
 export const useOptimisticUpdates = () => {
-  const state = useDojoStore.getState();
+  const state = useDojoStore((state) => state);
   const { nameSpace } = useDojo();
 
   const applyTournamentEntryUpdate = (
@@ -105,24 +105,25 @@ export const useOptimisticUpdates = () => {
     };
   };
 
-  const applyTournamentPrizeUpdate = (
-    tournamentId: BigNumberish,
-    prize: Prize
-  ) => {
-    const entityId = getEntityIdFromKeys([
-      BigInt(tournamentId),
-      BigInt(prize.id),
-    ]);
+  const applyTournamentPrizesUpdate = (prizes: Prize[]) => {
     const transactionId = uuidv4();
 
     state.applyOptimisticUpdate(transactionId, (draft) => {
-      applyModelUpdate(draft, entityId, nameSpace, "Prize", prize);
+      for (const prize of prizes) {
+        const entityId = getEntityIdFromKeys([BigInt(prize.id)]);
+        applyModelUpdate(draft, entityId, nameSpace, "Prize", prize);
+      }
     });
 
     const waitForPrizeEntityChange = async () => {
-      return await state.waitForEntityChange(entityId, (entity) => {
-        return (entity?.models?.[nameSpace]?.Prize as Prize) == prize;
+      const prizePromises = prizes.map((prize) => {
+        const entityId = getEntityIdFromKeys([BigInt(prize.id)]);
+        return state.waitForEntityChange(entityId, (entity) => {
+          return (entity?.models?.[nameSpace]?.Prize as Prize)?.id == prize.id;
+        });
       });
+
+      return await Promise.all(prizePromises);
     };
 
     return {
@@ -216,7 +217,7 @@ export const useOptimisticUpdates = () => {
 
   return {
     applyTournamentEntryUpdate,
-    applyTournamentPrizeUpdate,
+    applyTournamentPrizesUpdate,
     applyTournamentClaimPrizesUpdate,
     applyTournamentCreateAndAddPrizesUpdate,
   };

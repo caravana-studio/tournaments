@@ -1,9 +1,10 @@
 # torii config for profile [dev]
-world_address = "0x2f808e319783173b7a36bae6ab318fb98f6553fce73786b430cc02110483fd4"
-rpc = "https://api.cartridge.gg/x/tournaments/katana"
+world_address = "0x7cea35eb4b77d384aaf4de98d690659a93e8e836d2f0bdc63c5db89ffdf7e3c"
+rpc = "https://api.cartridge.gg/x/budokan/katana"
 [indexing]
 index_pending = true
 index_transactions = false
 contracts = [
-  "erc721:0x2f3f1675be75c1c9424d777cc79f60f29c9e24cf08775a4bb90f3d44812781c", # game_mock
+  "erc721:0x35389eec883a077ca4cc036cbe17fc802d297a08e8d7e930781de9ed492d05", # game_mock
+  "erc721:0x1d49fbde869b8c73dcb54d75df9cf29733c943f289082bf2b1e1ac077f0c08e", # erc721_mock
 ]

@@ -37,9 +37,9 @@ export interface StepProps {
 const formSchema = z.object({
   // Schedule step
   startTime: z.date(),
-  duration: z.number().min(1).max(90),
+  duration: z.number().min(1).max(7776000), // 90 days
   type: z.enum(["fixed", "open"]),
-  submissionPeriod: z.number().min(1).max(90),
+  submissionPeriod: z.number().min(1).max(324000), // 90 hours
 
   // Details step
   game: z.string().min(2).max(66),
@@ -52,8 +52,10 @@ const formSchema = z.object({
   enableGating: z.boolean().default(false),
   enableEntryFees: z.boolean().default(false),
   enableBonusPrizes: z.boolean().default(false),
+  enableEntryLimit: z.boolean().default(false),
   gatingOptions: z
     .object({
+      entry_limit: z.number().min(1).max(100).optional(),
       type: z.enum(["token", "tournament", "addresses"]).optional(),
       token: z.string().optional(),
       tournament: z
@@ -69,6 +71,7 @@ const formSchema = z.object({
     .object({
       tokenAddress: z.string().optional(),
       amount: z.number().min(0).optional(),
+      value: z.number().min(0).optional(),
       creatorFeePercentage: z.number().min(0).max(100).optional(),
       gameFeePercentage: z.number().min(0).max(100).optional(),
       prizeDistribution: z
@@ -128,15 +131,17 @@ const CreateTournament = () => {
         now.setMinutes(Math.ceil(now.getMinutes() / 5) * 5);
         return now;
       })(),
-      duration: 7,
+      duration: 86400,
       type: "fixed",
-      submissionPeriod: 1,
+      submissionPeriod: 3600,
 
       // Other steps
       enableGating: false,
       enableEntryFees: false,
       enableBonusPrizes: false,
+      enableEntryLimit: false,
       gatingOptions: {
+        entry_limit: 1,
         addresses: [],
         tournament: {
           tournaments: [],
@@ -222,61 +227,54 @@ const CreateTournament = () => {
     }
   };
 
+  const getStepIndex = (step: string): number => {
+    const steps = ["details", "schedule", "gating", "fees", "prizes"];
+    return steps.indexOf(step);
+  };
+
   // Render the current step's content
-  const renderStep = () => (
-    <>
-      <div
-        className={cn(
-          "transition-all duration-300 transform",
-          currentStep === "details"
-            ? "translate-x-0 opacity-100"
-            : "-translate-x-full opacity-0 absolute"
-        )}
-      >
-        <Card
-          variant="outline"
-          className={`h-auto ${currentStep === "details" ? "block" : "hidden"}`}
-        >
-          <Details form={form} />
-        </Card>
+  const renderStep = () => {
+    const steps = ["details", "schedule", "gating", "fees", "prizes"];
+    const currentIndex = getStepIndex(currentStep);
+
+    // Only render current step and adjacent steps (previous and next)
+    const visibleSteps = steps.filter((_, index) => {
+      return Math.abs(index - currentIndex) <= 1;
+    });
+
+    return (
+      <div className="relative h-full">
+        {visibleSteps.map((step) => {
+          const index = getStepIndex(step);
+          const isActive = currentStep === step;
+          const isPrevious = currentIndex > index;
+          const isNext = currentIndex < index;
+
+          return (
+            <div
+              key={step}
+              className={cn(
+                "transition-all duration-300 transform absolute w-full h-full overflow-y-auto pb-5 sm:pb-0",
+                isActive &&
+                  "translate-x-0 opacity-100 z-10 pointer-events-auto",
+                isPrevious &&
+                  "-translate-x-full opacity-0 z-0 pointer-events-none",
+                isNext && "translate-x-full opacity-0 z-0 pointer-events-none"
+              )}
+            >
+              <Card variant="outline" className="h-auto w-full">
+                {step === "details" && <Details form={form} />}
+                {step === "schedule" && <Schedule form={form} />}
+                {step === "gating" && <EntryRequirements form={form} />}
+                {step === "fees" && <EntryFees form={form} />}
+                {step === "prizes" && <BonusPrizes form={form} />}
+              </Card>
+            </div>
+          );
+        })}
       </div>
-      <div
-        className={cn(
-          "transition-all duration-300 transform",
-          currentStep === "schedule"
-            ? "translate-x-0 opacity-100"
-            : "-translate-x-full opacity-0 absolute"
-        )}
-      >
-        <Card
-          variant="outline"
-          className={`h-auto ${
-            currentStep === "schedule" ? "block" : "hidden"
-          }`}
-        >
-          <Schedule form={form} />
-        </Card>
-      </div>
-      <Card
-        variant="outline"
-        className={`h-auto ${currentStep === "gating" ? "block" : "hidden"}`}
-      >
-        <EntryRequirements form={form} />
-      </Card>
-      <Card
-        variant="outline"
-        className={`h-auto ${currentStep === "fees" ? "block" : "hidden"}`}
-      >
-        <EntryFees form={form} />
-      </Card>
-      <Card
-        variant="outline"
-        className={`h-auto ${currentStep === "prizes" ? "block" : "hidden"}`}
-      >
-        <BonusPrizes form={form} />
-      </Card>
-    </>
-  );
+    );
+  };
 
   const getSectionStatus = (form: any) => {
     // Helper function to safely check nested values
@@ -417,8 +415,8 @@ const CreateTournament = () => {
   };
 
   return (
-    <div className="flex flex-col gap-5 h-[calc(100vh-80px)] w-3/4 mx-auto px-20 pt-20">
-      <div className="space-y-5">
+    <div className="flex flex-col gap-5 lg:w-[87.5%] xl:w-5/6 2xl:w-3/4 h-full mx-auto">
+      <div className="flex flex-col gap-2 sm:gap-5">
         <div className="flex flex-row justify-between items-center">
           <Button variant="outline" onClick={() => navigate("/")}>
             <ARROW_LEFT />
@@ -435,7 +433,6 @@ const CreateTournament = () => {
             <Button
               type="button"
               disabled={!canProceed()}
-              className="px-10"
               onClick={() => {
                 nextStep();
               }}
@@ -452,26 +449,28 @@ const CreateTournament = () => {
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="font-astronaut text-4xl font-bold">
+          <span className="font-brand hidden sm:block lg:text-2xl xl:text-3xl 2xl:text-4xl 3xl:text-5xl font-bold">
             Create Tournament
           </span>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center w-full justify-between sm:w-auto sm:gap-6">
             {Object.entries(getSectionStatus(form)).map(
               ([section, _status]) => (
                 <div
                   key={section}
                   className={cn(
-                    "flex items-center gap-2",
+                    "flex items-center sm:gap-2",
                     visitedSections.has(section) || section === currentStep
                       ? "cursor-pointer"
                       : "cursor-not-allowed opacity-50",
-                    currentStep === section && "border-b-2 border-retro-green"
+                    currentStep === section && "border-b-2 border-brand"
                   )}
                   onClick={() => handleSectionClick(section)}
                 >
                   <StatusIndicator section={section} />
-                  <span className="text-sm capitalize">{section}</span>
+                  <span className="text-xs sm:text-sm capitalize">
+                    {section}
+                  </span>
                 </div>
               )
             )}
@@ -480,7 +479,9 @@ const CreateTournament = () => {
       </div>
 
       <Form {...form}>
-        <form className="flex flex-col gap-10 pb-10">{renderStep()}</form>
+        <form className="flex flex-col gap-10 sm:pb-10 h-5/6 overflow-hidden">
+          {renderStep()}
+        </form>
       </Form>
     </div>
   );

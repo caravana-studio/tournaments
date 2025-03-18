@@ -52,7 +52,7 @@ const SettingsCarousel = ({
       <div className="relative px-6 min-h-[200px]">
         <div className="flex flex-col items-center w-full">
           <TokenGameIcon size="lg" game={game} />
-          <h3 className="text-2xl font-astronaut">
+          <h3 className="text-2xl font-brand">
             {feltToString(currentSetting.name)}
           </h3>
           <p className="text-muted-foreground">{currentSetting.description}</p>
@@ -97,7 +97,7 @@ const SettingsCarousel = ({
               key={i}
               className={cn(
                 "w-2 h-2 rounded-full",
-                i === currentIndex ? "bg-retro-green" : "bg-muted"
+                i === currentIndex ? "bg-brand" : "bg-muted"
               )}
             />
           ))}

@@ -1,6 +1,6 @@
 import { useDojoSystem } from "@/dojo/hooks/useDojoSystem";
 import { useDojo } from "@/context/dojo";
-import { ChainId } from "@/dojo/config";
+import { ChainId } from "@/dojo/setup/networks";
 
 interface ContractAddresses {
   tournamentAddress: string;
