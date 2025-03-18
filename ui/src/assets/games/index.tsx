@@ -35,14 +35,14 @@ export const getGames = (): Record<string, Game> => {
   // const gameMockAddress = useDojoSystem("game_mock").contractAddress;
   if (isLocalKatana) {
     return {
-      "0x06b9ae82d70df624b322f96a602cbf95301e0bf03b9381ce7bdbbf23916573b2": {
-        name: "Loot Survivor",
-        Icon: function LootSurvivorIcon(
+      "0x04a4083f39b2cc813fdccde85b78568c025d0fae2d33dcf4b1a849ac3d902023": {
+        name: "Jokers of Neon",
+        Icon: function JokersOfNeonIcon(
           props: ImgHTMLAttributes<HTMLImageElement>
         ) {
-          return <img src={lootSurvivor} {...props} />;
+          return <img src={jokersOfNeon} {...props} />;
         },
-        url: "https://lootsurvivor.io",
+        url: "https://jokersofneon.com",
       },
     };
   } else if (isSepolia) {
