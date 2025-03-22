@@ -65,7 +65,8 @@ export function StarknetProvider({ children }: { children: React.ReactNode }) {
           };
         case CHAINS[ChainId.KATANA_LOCAL].chain:
           return {
-            nodeUrl: CHAINS[ChainId.KATANA_LOCAL].chain?.rpcUrls.default.http[0],
+            nodeUrl:
+              CHAINS[ChainId.KATANA_LOCAL].chain?.rpcUrls.default.http[0],
           };
         default:
           throw new Error(`Unsupported chain: ${chain.network}`);

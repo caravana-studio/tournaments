@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { StepProps } from "@/containers/CreateTournament";
 import { TROPHY, USER, X } from "@/components/Icons";
 import { displayAddress, feltToString } from "@/lib/utils";
@@ -667,130 +668,207 @@ const EntryRequirements = ({ form }: StepProps) => {
                         name="gatingOptions.addresses"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex flex-row items-center gap-2">
-                              <FormLabel className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
-                                Whitelisted Addresses
-                              </FormLabel>
-                              <div className="flex flex-row items-center gap-2">
+                            <div className="flex flex-row items-center justify-between">
+                              <div className="flex flex-row items-center gap-2 w-2/3">
+                                <FormLabel className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
+                                  Whitelisted Addresses
+                                </FormLabel>
                                 <FormDescription className="hidden sm:block">
-                                  Add addresses that are allowed to participate
-                                  in the tournament
+                                  Add addresses separated by commas or line
+                                  breaks
                                 </FormDescription>
-                                {addressError && (
+                              </div>
+                              {addressError && (
+                                <div className="flex flex-row items-center gap-2 w-1/3 overflow-x-auto pb-2">
                                   <span className="text-red-500 text-sm">
                                     {addressError}
                                   </span>
-                                )}
-                              </div>
+                                </div>
+                              )}
                             </div>
                             <FormControl>
                               <div className="flex flex-col gap-5">
-                                <div className="flex gap-2">
-                                  <Input
-                                    placeholder="Enter address"
+                                <div className="flex flex-row gap-2">
+                                  <Textarea
+                                    className="h-20 w-3/4"
+                                    placeholder="Enter addresses (separated by commas or line breaks)"
                                     value={newAddress}
                                     onChange={(e) =>
                                       setNewAddress(e.target.value)
                                     }
                                   />
-                                  <Button
-                                    type="button"
-                                    onClick={() => {
-                                      if (newAddress) {
-                                        // Split by comma and trim whitespace
-                                        const addresses = newAddress
-                                          .split(",")
-                                          .map((addr) =>
-                                            getChecksumAddress(addr.trim())
-                                          )
-                                          .filter((addr) => addr.length > 0);
+                                  <div className="flex flex-col justify-between items-center">
+                                    <span className="text-xs text-muted-foreground">
+                                      Example: 0x123..., 0x456... or one address
+                                      per line
+                                    </span>
+                                    <Button
+                                      type="button"
+                                      onClick={() => {
+                                        if (newAddress) {
+                                          // Split by comma or line break and trim whitespace
+                                          const rawAddresses = newAddress
+                                            .replace(/\r\n|\r|\n/g, ",") // Convert line breaks to commas
+                                            .split(",")
+                                            .map((addr) => addr.trim())
+                                            .filter((addr) => addr.length > 0);
 
-                                        // Validate each address and track invalid ones
-                                        const validAddresses: string[] = [];
-                                        const invalidAddresses: string[] = [];
-                                        const duplicateAddresses: string[] = [];
+                                          // Validate each address and track invalid ones
+                                          const validAddresses: string[] = [];
+                                          const invalidAddresses: string[] = [];
+                                          const duplicateAddresses: string[] =
+                                            [];
 
-                                        addresses.forEach((addr) => {
-                                          try {
-                                            // Check if address is already in the list
-                                            if (field.value.includes(addr)) {
-                                              duplicateAddresses.push(
+                                          rawAddresses.forEach((rawAddr) => {
+                                            try {
+                                              // First try to convert to checksum address
+                                              const addr =
+                                                getChecksumAddress(rawAddr);
+
+                                              // Then check if it's a valid address
+                                              if (
+                                                !validateChecksumAddress(addr)
+                                              ) {
+                                                invalidAddresses.push(rawAddr);
+                                                return;
+                                              }
+
+                                              // Then check if it's already in the existing list
+                                              if (
+                                                field.value.some(
+                                                  (existingAddr) =>
+                                                    existingAddr.toLowerCase() ===
+                                                    addr.toLowerCase()
+                                                )
+                                              ) {
+                                                duplicateAddresses.push(
+                                                  displayAddress(addr)
+                                                );
+                                              } else {
+                                                // Only add if it's valid and not a duplicate
+                                                validAddresses.push(addr);
+                                              }
+                                            } catch (e) {
+                                              // If getChecksumAddress fails, add to invalid addresses
+                                              invalidAddresses.push(rawAddr);
+                                            }
+                                          });
+
+                                          // Also check for duplicates within the new addresses themselves
+                                          const uniqueValidAddresses: string[] =
+                                            [];
+                                          const internalDuplicates: string[] =
+                                            [];
+
+                                          validAddresses.forEach((addr) => {
+                                            if (
+                                              uniqueValidAddresses.some(
+                                                (existingAddr) =>
+                                                  existingAddr.toLowerCase() ===
+                                                  addr.toLowerCase()
+                                              )
+                                            ) {
+                                              internalDuplicates.push(
                                                 displayAddress(addr)
                                               );
-                                            }
-                                            // Validate the address
-                                            else if (
-                                              validateChecksumAddress(addr)
-                                            ) {
-                                              validAddresses.push(addr);
                                             } else {
-                                              invalidAddresses.push(addr);
+                                              uniqueValidAddresses.push(addr);
                                             }
-                                          } catch (e) {
-                                            invalidAddresses.push(addr);
+                                          });
+
+                                          if (internalDuplicates.length > 0) {
+                                            duplicateAddresses.push(
+                                              ...internalDuplicates
+                                            );
                                           }
-                                        });
 
-                                        // Construct error message
-                                        let errorMessage = "";
-                                        if (invalidAddresses.length > 0) {
-                                          errorMessage += `Invalid addresses: ${invalidAddresses.join(
-                                            ", "
-                                          )}`;
-                                        }
-                                        if (duplicateAddresses.length > 0) {
-                                          if (errorMessage)
-                                            errorMessage += ". ";
-                                          errorMessage += `Duplicate addresses: ${duplicateAddresses.join(
-                                            ", "
-                                          )}`;
-                                        }
+                                          // Construct error message
+                                          let errorMessage = "";
+                                          if (invalidAddresses.length > 0) {
+                                            errorMessage += `Invalid addresses: ${invalidAddresses.join(
+                                              ", "
+                                            )}`;
+                                          }
+                                          if (duplicateAddresses.length > 0) {
+                                            if (errorMessage)
+                                              errorMessage += ". ";
+                                            errorMessage += `Duplicate addresses: ${duplicateAddresses.join(
+                                              ", "
+                                            )}`;
+                                          }
 
-                                        if (validAddresses.length > 0) {
-                                          field.onChange([
-                                            ...field.value,
-                                            ...validAddresses,
-                                          ]);
-                                          setNewAddress("");
-                                          setAddressError(errorMessage);
-                                        } else {
-                                          setAddressError(
-                                            errorMessage ||
-                                              "No valid addresses found"
-                                          );
+                                          if (uniqueValidAddresses.length > 0) {
+                                            field.onChange([
+                                              ...field.value,
+                                              ...uniqueValidAddresses,
+                                            ]);
+                                            setNewAddress("");
+
+                                            // Only show error if there were invalid or duplicate addresses
+                                            if (errorMessage) {
+                                              setAddressError(errorMessage);
+                                            } else {
+                                              setAddressError("");
+                                            }
+                                          } else {
+                                            setAddressError(
+                                              errorMessage ||
+                                                "No valid addresses found"
+                                            );
+                                          }
                                         }
-                                      }
-                                    }}
-                                  >
-                                    Add
-                                  </Button>
+                                      }}
+                                    >
+                                      Add Addresses
+                                    </Button>
+                                  </div>
                                 </div>
                                 {field.value.length > 0 && (
                                   <>
                                     <div className="w-full h-0.5 bg-brand/25" />
-                                    <div className="flex flex-row gap-2 overflow-x-auto">
-                                      {field.value.map((address, index) => (
-                                        <div
-                                          key={index}
-                                          className="flex items-center justify-between p-2 border border-neutral rounded w-fit"
-                                        >
-                                          <span className="truncate">
-                                            {displayAddress(address)}
-                                          </span>
-                                          <span
-                                            className="h-4 w-4 hover:cursor-pointer"
-                                            onClick={() => {
-                                              const newAddresses = [
-                                                ...field.value,
-                                              ];
-                                              newAddresses.splice(index, 1);
-                                              field.onChange(newAddresses);
-                                            }}
-                                          >
-                                            <X />
-                                          </span>
+                                    <div className="flex flex-row items-center justify-between">
+                                      <div className="flex flex-col gap-2">
+                                        <span className="text-sm">
+                                          {field.value.length} address
+                                          {field.value.length !== 1
+                                            ? "es"
+                                            : ""}{" "}
+                                          added
+                                        </span>
+                                        <div className="flex flex-row gap-2 w-5/6">
+                                          {field.value.map((address, index) => (
+                                            <div
+                                              key={index}
+                                              className="flex items-center justify-between p-2 border border-neutral rounded w-fit"
+                                            >
+                                              <span className="truncate">
+                                                {displayAddress(address)}
+                                              </span>
+                                              <span
+                                                className="h-4 w-4 ml-2 hover:cursor-pointer"
+                                                onClick={() => {
+                                                  const newAddresses = [
+                                                    ...field.value,
+                                                  ];
+                                                  newAddresses.splice(index, 1);
+                                                  field.onChange(newAddresses);
+                                                }}
+                                              >
+                                                <X />
+                                              </span>
+                                            </div>
+                                          ))}
                                         </div>
-                                      ))}
+                                      </div>
+                                      <div className="flex flex-col items-center w-1/6">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          onClick={() => field.onChange([])}
+                                        >
+                                          Clear All
+                                        </Button>
+                                      </div>
                                     </div>
                                   </>
                                 )}

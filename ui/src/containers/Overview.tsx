@@ -417,7 +417,7 @@ const Overview = () => {
     <div className="flex flex-row gap-5 h-full">
       <GameFilters />
       <div className="flex flex-col gap-2 sm:gap-0 w-full sm:w-4/5 p-1 sm:p-2">
-        <div className="flex flex-row items-center justify-between w-full border-b-4 border-brand h-[44px]">
+        <div className="flex flex-row items-center justify-between w-full border-b-4 border-brand h-[44px] 3xl:h-[52px]">
           {/* Hide TournamentTabs on mobile when selectedTab is "my" */}
           <div className={selectedTab === "my" ? "hidden sm:block" : "block"}>
             <TournamentTabs

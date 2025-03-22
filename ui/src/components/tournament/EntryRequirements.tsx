@@ -3,7 +3,15 @@ import { CairoCustomEnum } from "starknet";
 import { Token, Tournament } from "@/generated/models.gen";
 import { displayAddress, feltToString } from "@/lib/utils";
 import { useDojo } from "@/context/dojo";
-import { COIN, CHECK, TROPHY, CLOCK, LOCK, COUNTER } from "@/components/Icons";
+import {
+  COIN,
+  TROPHY,
+  CLOCK,
+  LOCK,
+  COUNTER,
+  USER,
+  EXTERNAL_LINK,
+} from "@/components/Icons";
 import {
   HoverCard,
   HoverCardContent,
@@ -13,7 +21,16 @@ import { Tournament as TournamentModel } from "@/generated/models.gen";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogTitle,
+  DialogDescription,
+  DialogHeader,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 const EntryRequirements = ({
   tournamentModel,
@@ -34,6 +51,7 @@ const EntryRequirements = ({
     () => tournamentModel.entry_requirement.Some,
     [tournamentModel]
   );
+  const entryLimit = entryRequirement?.entry_limit.Some;
   const activeVariant = useMemo(
     () => entryRequirement?.entry_requirement_type.activeVariant(),
     [entryRequirement]
@@ -71,11 +89,12 @@ const EntryRequirements = ({
     selectedChainConfig.blockExplorerUrl !== undefined;
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [allowlistDialogOpen, setAllowlistDialogOpen] = useState(false);
 
   const renderContent = () => {
     if (activeVariant === "token") {
       return (
-        <div className="text-brand flex flex-row items-center justify-center gap-1 w-full">
+        <div className="text-brand flex flex-row items-center gap-1 w-full">
           <span className="w-8">
             <COIN />
           </span>
@@ -95,9 +114,9 @@ const EntryRequirements = ({
       );
     } else {
       return (
-        <div className="flex flex-row items-center justify-center gap-1 w-full">
-          <span className="w-8">
-            <CHECK />
+        <div className="flex flex-row items-center gap-1 w-full">
+          <span className="w-6">
+            <USER />
           </span>
           <span className="hidden sm:block">Allowlist</span>
         </div>
@@ -131,14 +150,22 @@ const EntryRequirements = ({
               {displayAddress(token?.address ?? "0x0")}
             </span>
           </div>
+          {!!entryLimit && (
+            <div className="flex flex-row items-center gap-2">
+              <span>Entry Limit:</span>
+              <span>{Number(entryLimit)}</span>
+            </div>
+          )}
         </>
       );
     } else if (activeVariant === "tournament") {
       return (
         <>
-          <h4 className="text-lg">
-            Tournament <span className="capitalize">{tournamentVariant}</span>
-          </h4>
+          <p className="text-muted-foreground">
+            {`To enter you must have ${
+              tournamentVariant === "participants" ? "participated in" : "won"
+            }:`}
+          </p>
           <div className="h-[100px] flex flex-col gap-2 overflow-y-auto">
             {tournamentsData?.map((tournament, index) => {
               const tournamentEnd = tournament.schedule.game.end;
@@ -167,17 +194,36 @@ const EntryRequirements = ({
               );
             })}
           </div>
+          {!!entryLimit && (
+            <div className="flex flex-row items-center gap-2">
+              <span>Entry Limit:</span>
+              <span>{Number(entryLimit)}</span>
+            </div>
+          )}
         </>
       );
     } else {
       return (
-        <div className="h-[100px] flex flex-col gap-2 overflow-y-auto">
-          {allowlist?.map((item: string, index: number) => (
-            <div key={index}>
-              <span>{displayAddress(item)}</span>
+        <>
+          <p className="text-muted-foreground">
+            {`To enter you must be whitelisted:`}
+          </p>
+          <Button
+            className="w-fit"
+            variant="outline"
+            onClick={() => {
+              setAllowlistDialogOpen(true);
+            }}
+          >
+            <span>See Allowlist</span>
+          </Button>
+          {!!entryLimit && (
+            <div className="flex flex-row items-center gap-2">
+              <span>Entry Limit:</span>
+              <span>{Number(entryLimit)}</span>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       );
     }
   };
@@ -242,6 +288,63 @@ const EntryRequirements = ({
           </HoverCardContent>
         </HoverCard>
       </div>
+
+      {/* Allowlist Dialog */}
+      <Dialog open={allowlistDialogOpen} onOpenChange={setAllowlistDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Tournament Allowlist</DialogTitle>
+            <DialogDescription>
+              Only addresses on this list can participate in the tournament.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="h-[300px] mt-4 overflow-y-auto grid grid-cols-2 sm:grid-cols-3">
+            {allowlist && allowlist.length > 0 ? (
+              <div className="space-y-2">
+                {allowlist.map((address: string, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 border border-brand-muted rounded"
+                  >
+                    <span className="w-6">
+                      <USER />
+                    </span>
+                    <span className="font-mono text-xs">
+                      {displayAddress(address)}
+                    </span>
+                    {blockExplorerExists && (
+                      <a
+                        href={`${selectedChainConfig.blockExplorerUrl}/${address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-6"
+                      >
+                        <EXTERNAL_LINK />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No addresses in allowlist
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4">
+            <div className="flex justify-between w-full">
+              <span className="text-muted-foreground">
+                {allowlist ? `${allowlist.length} addresses` : "0 addresses"}
+              </span>
+              <DialogClose asChild>
+                <Button variant="outline">Close</Button>
+              </DialogClose>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

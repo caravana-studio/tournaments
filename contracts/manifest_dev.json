@@ -1,8 +1,8 @@
 {
   "world": {
     "class_hash": "0x7c9469d45a9cdbab775035afb48e1fa73fb35ab059fcb9dfb0a301aa973e783",
-    "address": "0x6d7a560b1c63eb397cbbf1b353038d7986275ee6ed15a211c84cb4f62656a4a",
-    "seed": "tournaments",
+    "address": "0x7cea35eb4b77d384aaf4de98d690659a93e8e836d2f0bdc63c5db89ffdf7e3c",
+    "seed": "budokan",
     "name": "Budokan",
     "entrypoints": [
       "uuid",
@@ -1312,7 +1312,7 @@
   },
   "contracts": [
     {
-      "address": "0x788184819d74bfa25e613fa07ebd747136ef84e4288b673609c043cdcc86f00",
+      "address": "0x7a8795020a381c025cf0f7fdf173965c992a18b59626f72901023c7c6aecac9",
       "class_hash": "0x17a6b66d68b3f0218cdf141629fb56e967474982d1cc95a413cd4bc7db289f8",
       "abi": [
         {
@@ -1821,7 +1821,7 @@
       ]
     },
     {
-      "address": "0x5a9c36fdbf7e3bb47bca22b52f36970d524f6b26de6287704673183d4f74668",
+      "address": "0x1d49fbde869b8c73dcb54d75df9cf29733c943f289082bf2b1e1ac077f0c08e",
       "class_hash": "0x579ccb402e3d32011dd9b391b397b6ba1bd643255dc83c79e8af3c4c2deab61",
       "abi": [
         {
@@ -2528,7 +2528,7 @@
       ]
     },
     {
-      "address": "0x240a993e9f430068c02b4a53b33783eb6e3d7f128c4a4842907862376343e15",
+      "address": "0x35389eec883a077ca4cc036cbe17fc802d297a08e8d7e930781de9ed492d05",
       "class_hash": "0x38941be9845ab7fc54c194d9f151fe4f5ef38dce7b6feb11d6795a4a06267a4",
       "abi": [
         {
@@ -3609,7 +3609,7 @@
       ]
     },
     {
-      "address": "0x53ce121f72bbe85f0a6eb6aeafe43cbd5655caa95896138af4cebcdd09dc097",
+      "address": "0x6c6614da6a5bea6818f5eafed0d28aec4fd6fac81d97ca7744147fa02314345",
       "class_hash": "0x65a72abacedc4f119ae41759aa99bfe0f0d8c973c512c71f7cf44e3fdc4039b",
       "abi": [
         {

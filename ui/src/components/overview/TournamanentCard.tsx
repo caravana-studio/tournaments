@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import useUIStore from "@/hooks/useUIStore";
 import { useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
 
 interface TournamentCardProps {
   tournament: Tournament;
@@ -56,13 +57,13 @@ export const TournamentCard = ({
     (t) => t.address === entryFeeToken
   )?.symbol;
 
-  const entryFeePrizes = extractEntryFeePrizes(
+  const { distributionPrizes } = extractEntryFeePrizes(
     tournament?.id,
     tournament?.entry_fee,
     entryCount
   );
 
-  const allPrizes = [...entryFeePrizes, ...(prizes ?? [])];
+  const allPrizes = [...distributionPrizes, ...(prizes ?? [])];
 
   const groupedPrizes = groupPrizesByTokens(allPrizes, tokens);
 
@@ -81,7 +82,7 @@ export const TournamentCard = ({
   );
 
   useEffect(() => {
-    const allPricesExist = Object.keys(prizes ?? []).every(
+    const allPricesExist = Object.keys(groupedPrizes ?? []).every(
       (symbol) => prices[symbol] !== undefined
     );
 
@@ -99,7 +100,7 @@ export const TournamentCard = ({
   const startsInSeconds = (startDate.getTime() - currentDate.getTime()) / 1000;
   const startsIn = formatTime(startsInSeconds);
   const endsInSeconds = (endDate.getTime() - currentDate.getTime()) / 1000;
-
+  const endsIn = formatTime(endsInSeconds);
   const registrationType =
     tournament?.schedule.registration.isSome() && Number(startsInSeconds) <= 0
       ? "Closed"
@@ -157,6 +158,23 @@ export const TournamentCard = ({
     }
   };
 
+  const isRestricted = tournament?.entry_requirement.isSome();
+  const hasEntryLimit =
+    tournament?.entry_requirement?.Some?.entry_limit.isSome();
+  const entryLimit = tournament?.entry_requirement?.Some?.entry_limit?.Some;
+  const requirementVariant =
+    tournament?.entry_requirement.Some?.entry_requirement_type?.activeVariant();
+  const tournamentRequirementVariant =
+    tournament?.entry_requirement.Some?.entry_requirement_type?.variant?.tournament?.activeVariant();
+
+  const renderTimeClass = (time: number) => {
+    if (time > 3600) {
+      return "text-success";
+    } else {
+      return "text-warning";
+    }
+  };
+
   return (
     <Card
       variant="outline"
@@ -164,7 +182,7 @@ export const TournamentCard = ({
       onClick={() => {
         navigate(`/tournament/${Number(tournament.id).toString()}`);
       }}
-      className="h-24 sm:h-48 animate-in fade-in zoom-in duration-300 ease-out"
+      className="h-32 sm:h-48 animate-in fade-in zoom-in duration-300 ease-out"
     >
       <div className="flex flex-col justify-between h-full">
         <div className="flex flex-col gap-2">
@@ -191,54 +209,112 @@ export const TournamentCard = ({
           </div>
           <div className="hidden sm:block w-full h-0.5 bg-brand/25" />
         </div>
-        <div className="hidden sm:flex flex-row">
-          <div className="flex flex-col w-1/2">
-            <div className="flex flex-row gap-2">
-              <span className="text-brand-muted">Registration:</span>
-              <span>{registrationType}</span>
-            </div>
-            <div className="flex flex-row gap-2">
-              <span className="text-brand-muted">Leaderboard:</span>
-              <span>Top {Number(tournament.game_config.prize_spots)}</span>
-            </div>
-            <div className="flex flex-row gap-2">
-              {status === "upcoming" ? (
-                <>
-                  <span className="text-brand-muted">Starts In:</span>
-                  <span>{startsIn}</span>
-                </>
-              ) : status === "live" ? (
-                <>
-                  <span className="text-brand-muted">Ends In:</span>
-                  <span>{formatTime(endsInSeconds)}</span>
-                </>
-              ) : (
-                <></>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-row w-1/2 justify-end px-2">
+        <div className="flex flex-row items-center">
+          <div className="flex flex-row sm:flex-wrap items-center gap-2 w-3/4">
+            {/* Registration Type */}
             <Tooltip delayDuration={50}>
               <TooltipTrigger asChild>
-                <div className="flex items-center justify-center cursor-pointer">
+                <div>
+                  <Badge variant="outline" className="text-xs p-1 rounded-md">
+                    {registrationType}
+                  </Badge>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="center">
+                <p>{registrationType} Registration</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Prize Spots */}
+            <Tooltip delayDuration={50}>
+              <TooltipTrigger asChild>
+                <div>
+                  <Badge variant="outline" className="text-xs p-1 rounded-md">
+                    {Number(tournament.game_config.prize_spots)} Winners
+                  </Badge>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="center">
+                <p>{Number(tournament.game_config.prize_spots)} Winners</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Restricte Access */}
+            {isRestricted && (
+              <Tooltip delayDuration={50}>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Badge variant="outline" className="text-xs p-1 rounded-md">
+                      Restricted
+                    </Badge>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center">
+                  <p>
+                    {requirementVariant === "allowlist"
+                      ? "Allowlist"
+                      : requirementVariant === "token"
+                      ? "Token"
+                      : requirementVariant === "tournament"
+                      ? `Tournament ${tournamentRequirementVariant}`
+                      : "Unknown"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Limited Entry */}
+            {hasEntryLimit && (
+              <Tooltip delayDuration={50}>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Badge variant="outline" className="text-xs p-1 rounded-md">
+                      {`${Number(entryLimit)} entry${
+                        Number(entryLimit) === 1 ? "" : "s"
+                      }`}
+                    </Badge>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center">
+                  <p>
+                    {Number(entryLimit)} entry
+                    {Number(entryLimit) === 1 ? "" : "s"} per qualification
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+
+          <div className="flex flex-row w-1/4 justify-end sm:px-2">
+            <Tooltip delayDuration={50}>
+              <TooltipTrigger asChild>
+                <div className="flex items-center justify-center">
                   <TokenGameIcon key={index} game={gameAddress} size={"md"} />
                 </div>
               </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                align="center"
-                sideOffset={-10}
-                className="bg-black text-neutral border border-brand-muted px-2 py-1 rounded text-sm z-50"
-              >
+              <TooltipContent side="top" align="center" sideOffset={-10}>
                 {gameName ? feltToString(gameName) : "Unknown"}
               </TooltipContent>
             </Tooltip>
           </div>
         </div>
-        <div className="flex flex-row items-center justify-between w-3/4 mx-auto">
-          <div className="flex sm:hidden flex-row">
-            <TokenGameIcon key={index} game={gameAddress} size={"md"} />
-          </div>
+        <div className="flex flex-row items-center justify-center gap-5 w-full mx-auto">
+          {/* Time Status */}
+          {status === "upcoming" ? (
+            <div className="flex flex-row items-center gap-2">
+              <span className="text-brand-muted">Starts In:</span>
+              <span className={renderTimeClass(startsInSeconds)}>
+                {startsIn}
+              </span>
+            </div>
+          ) : status === "live" ? (
+            <div className="flex flex-row items-center gap-2">
+              <span className="text-brand-muted">Ends In:</span>
+              <span className={renderTimeClass(endsInSeconds)}>{endsIn}</span>
+            </div>
+          ) : (
+            <></>
+          )}
           <div className="flex flex-row items-center gap-2">
             <span className="text-brand-muted">Fee:</span>
             {pricesLoading ? (

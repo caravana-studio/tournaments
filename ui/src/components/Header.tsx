@@ -153,7 +153,7 @@ const Header = () => {
           {!isLocal && account && (
             <DropdownMenu>
               <DropdownMenuTrigger>
-                <Button variant="outline" className="w-32 ">
+                <Button variant="outline">
                   {selectedChainConfig.chainId === ChainId.SN_MAIN ? (
                     <STARKNET />
                   ) : (

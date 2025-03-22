@@ -25,6 +25,7 @@ import {
 import { TOURNAMENT_VERSION_KEY } from "@/lib/constants";
 import { addAddressPadding } from "starknet";
 import { Tournament } from "@/generated/models.gen";
+import { useDojo } from "@/context/dojo";
 
 export type TournamentFormData = z.infer<typeof formSchema>;
 
@@ -108,10 +109,11 @@ const CreateTournament = () => {
   const navigate = useNavigate();
   const { address } = useAccount();
   const { createTournamentAndApproveAndAddPrizes } = useSystemCalls();
-
+  const { nameSpace } = useDojo();
   useSubscribeTournamentsQuery();
   const { entity: metricsEntity } = useGetMetricsQuery(
-    addAddressPadding(TOURNAMENT_VERSION_KEY)
+    addAddressPadding(TOURNAMENT_VERSION_KEY),
+    nameSpace
   );
 
   const form = useForm<z.infer<typeof formSchema>>({

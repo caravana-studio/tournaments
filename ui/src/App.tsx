@@ -24,15 +24,17 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import NotFound from "@/containers/NotFound";
 import { useNetwork } from "@starknet-react/core";
+import { useDojo } from "@/context/dojo";
 
 function App() {
+  const { nameSpace } = useDojo();
   const { setGameData } = useUIStore();
   const { chain } = useNetwork();
   const navigate = useNavigate();
   const location = useLocation();
   const previousChainRef = useRef<string | undefined>(chain?.id.toString());
 
-  useGetTokensQuery();
+  useGetTokensQuery(nameSpace);
 
   const { data: gameNamespaces } = useGetGameNamespaces();
 

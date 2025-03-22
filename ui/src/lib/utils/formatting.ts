@@ -210,15 +210,26 @@ export const extractEntryFeePrizes = (
   tournamentId: BigNumberish,
   entryFee: CairoOption<EntryFee>,
   entryCount: BigNumberish
-): Prize[] => {
+): {
+  tournamentCreatorShare: Prize[];
+  gameCreatorShare: Prize[];
+  distributionPrizes: Prize[];
+} => {
   if (!entryFee?.isSome()) {
-    return [];
+    return {
+      tournamentCreatorShare: [],
+      gameCreatorShare: [],
+      distributionPrizes: [],
+    };
   }
-
   const totalFeeAmount = BigInt(entryFee.Some?.amount!) * BigInt(entryCount);
 
   if (totalFeeAmount === 0n) {
-    return [];
+    return {
+      tournamentCreatorShare: [],
+      gameCreatorShare: [],
+      distributionPrizes: [],
+    };
   }
 
   const gameCreatorShare = entryFee.Some?.game_creator_share?.isSome()
@@ -271,25 +282,34 @@ export const extractEntryFeePrizes = (
       : [];
 
   const distrbutionPrizes =
-    entryFee.Some?.distribution?.map((distribution, index) => {
-      const amount = (totalFeeAmount * BigInt(distribution)) / 100n;
+    entryFee.Some?.distribution
+      ?.map((distribution, index) => {
+        // Skip zero distributions
+        if (distribution === 0) return null;
 
-      return {
-        id: 0,
-        tournament_id: tournamentId,
-        payout_position: index + 1,
-        token_address: entryFee.Some?.token_address!,
-        token_type: new CairoCustomEnum({
-          erc20: {
-            amount: addAddressPadding(bigintToHex(amount)),
-          },
-          erc721: undefined,
-        }),
-        type: "entry_fee",
-      } as Prize;
-    }) || [];
+        const amount = (totalFeeAmount * BigInt(distribution)) / 100n;
 
-  return [...gameCreatorShare, ...tournamentCreatorShare, ...distrbutionPrizes];
+        return {
+          id: 0,
+          tournament_id: tournamentId,
+          payout_position: index + 1,
+          token_address: entryFee.Some?.token_address!,
+          token_type: new CairoCustomEnum({
+            erc20: {
+              amount: addAddressPadding(bigintToHex(amount)),
+            },
+            erc721: undefined,
+          }),
+          type: "entry_fee",
+        } as Prize;
+      })
+      .filter((prize) => prize !== null) || []; // Filter out null entries
+
+  return {
+    tournamentCreatorShare,
+    gameCreatorShare,
+    distributionPrizes: distrbutionPrizes,
+  };
 };
 
 export const getClaimablePrizes = (
@@ -520,12 +540,7 @@ export const processTournamentFromSql = (tournament: any): Tournament => {
   if (tournament["entry_requirement"] === "Some") {
     let entryRequirementType: CairoCustomEnum;
 
-    console.log(
-      tournament[
-        "entry_requirement.Some.entry_requirement_type.tournament.winners"
-      ]
-    );
-    switch (tournament["entry_requirement.Some"]) {
+    switch (tournament["entry_requirement.Some.entry_requirement_type"]) {
       case "token":
         entryRequirementType = new CairoCustomEnum({
           token:
@@ -577,7 +592,13 @@ export const processTournamentFromSql = (tournament: any): Tournament => {
     }
 
     entryRequirement = {
-      entry_limit: tournament["entry_requirement.Some.entry_limit"],
+      entry_limit:
+        tournament["entry_requirement.Some.entry_limit"] === "Some"
+          ? new CairoOption(
+              CairoOptionVariant.Some,
+              tournament["entry_requirement.Some.entry_limit.Some"]
+            )
+          : new CairoOption(CairoOptionVariant.None),
       entry_requirement_type: entryRequirementType,
     };
   }

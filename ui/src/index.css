@@ -141,6 +141,12 @@
   }
 }
 
+@media (min-width: 1024px) {
+  :root {
+    --timeline-extension: 30px;
+  }
+}
+
 /* =================
    Scrollbar Styling
    ================= */

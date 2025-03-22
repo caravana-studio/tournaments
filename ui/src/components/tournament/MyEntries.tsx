@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/card";
 import { DOLLAR } from "@/components/Icons";
 import {
   useGetGameMetadataInListQuery,
@@ -9,11 +8,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "@starknet-react/core";
 import { BigNumberish, addAddressPadding } from "starknet";
 import { bigintToHex } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
 import EntryCard from "@/components/tournament/myEntries/EntryCard";
 import { TokenMetadata } from "@/generated/models.gen";
 import { useDojoStore } from "@/dojo/hooks/useDojoStore";
 import { useDojo } from "@/context/dojo";
+import {
+  TournamentCard,
+  TournamentCardTitle,
+  TournamentCardHeader,
+  TournamentCardContent,
+  TournamentCardMetric,
+  TournamentCardSwitch,
+} from "./containers/TournamentCard";
 
 interface MyEntriesProps {
   tournamentId: BigNumberish;
@@ -51,6 +57,7 @@ const MyEntries = ({
     tokenIds: ownedTokenIds ?? [],
     limit: 1000,
     offset: 0,
+    nameSpace,
   });
 
   const myRegistrations = state
@@ -138,65 +145,37 @@ const MyEntries = ({
   }, [address, myEntriesCount]);
 
   return (
-    <Card
-      variant="outline"
-      className={`sm:w-1/2 transition-all duration-300 ease-in-out ${
-        showMyEntries ? "h-[210px] 3xl:h-[270px]" : "h-[60px] 3xl:h-[80px]"
-      }`}
-    >
-      <div className="flex flex-col justify-between">
-        <div className="flex flex-row items-center justify-between h-6 sm:h-8">
-          <span className="font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
-            My Entries
-          </span>
-          <div className="flex flex-row items-center gap-2">
-            {address ? (
-              myEntriesCount > 0 ? (
-                <>
-                  <span className="text-neutral 3xl:text-lg">
-                    {showMyEntries ? "Hide" : "Show Entries"}
-                  </span>
-                  <Switch
-                    checked={showMyEntries}
-                    onCheckedChange={setShowMyEntries}
-                  />
-                </>
-              ) : (
-                <span className="text-neutral 3xl:text-lg">No Entries</span>
-              )
-            ) : (
-              <span className="text-neutral 3xl:text-lg">
-                No Account Connected
-              </span>
-            )}
-            <div className="flex flex-row items-center font-brand text-lg xl:text-xl 2xl:text-2xl 3xl:text-3xl">
-              <span className="w-8 3xl:w-10">
-                <DOLLAR />
-              </span>
-              : {myEntriesCount}
-            </div>
+    <TournamentCard showCard={showMyEntries}>
+      <TournamentCardHeader>
+        <TournamentCardTitle>My Entries</TournamentCardTitle>
+        <div className="flex flex-row items-center gap-2">
+          <TournamentCardSwitch
+            checked={showMyEntries}
+            onCheckedChange={setShowMyEntries}
+            showSwitch={address ? myEntriesCount > 0 : false}
+            notShowingSwitchLabel={
+              address ? "No Entries" : "No Account Connected"
+            }
+            checkedLabel="Hide"
+            uncheckedLabel="Show Entries"
+          />
+          <TournamentCardMetric icon={<DOLLAR />} metric={myEntriesCount} />
+        </div>
+      </TournamentCardHeader>
+      <TournamentCardContent showContent={showMyEntries}>
+        <div className="p-2 h-full">
+          <div className="flex flex-row gap-5 overflow-x-auto pb-2 h-full">
+            {mergedEntries?.map((mergedEntry, index) => (
+              <EntryCard
+                key={index}
+                gameAddress={gameAddress}
+                mergedEntry={mergedEntry}
+              />
+            ))}
           </div>
         </div>
-        <div
-          className={`transition-all duration-300 delay-150 ease-in-out ${
-            showMyEntries ? "h-auto opacity-100" : "h-0 opacity-0"
-          } overflow-hidden`}
-        >
-          <div className="w-full h-0.5 bg-brand/25 mt-2" />
-          <div className="p-2 h-auto">
-            <div className="flex flex-row gap-5 overflow-x-auto pb-2">
-              {mergedEntries?.map((mergedEntry, index) => (
-                <EntryCard
-                  key={index}
-                  gameAddress={gameAddress}
-                  mergedEntry={mergedEntry}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </Card>
+      </TournamentCardContent>
+    </TournamentCard>
   );
 };
 

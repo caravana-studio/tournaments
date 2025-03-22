@@ -53,7 +53,7 @@ const TimelineCard = ({
         )}
         {showConnector && (
           <motion.div
-            className="absolute top-5 sm:top-7 left-[calc(100%_-_0px)] w-[calc(100%_+_10px)] sm:w-[calc(100%_+_20px)] 3xl:w-[calc(100%_+_30px)] h-0.5 border-t-4 border-dotted border-brand-muted z-10"
+            className="absolute top-5 sm:top-7 3xl:top-9 left-[calc(100%_-_0px)] w-[calc(100%_+_10px)] sm:w-[calc(100%_+_20px)] h-0.5 border-t-4 border-dotted border-brand-muted z-10"
             initial={{ width: 0 }}
             animate={{ width: "calc(100% + var(--timeline-extension, 10px))" }}
             transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}

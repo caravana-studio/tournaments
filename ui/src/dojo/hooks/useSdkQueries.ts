@@ -11,7 +11,7 @@ import {
 import { ModelsMapping } from "@/generated/models.gen";
 import { addAddressPadding, BigNumberish } from "starknet";
 
-export const useGetTokensQuery = () => {
+export const useGetTokensQuery = (nameSpace: string) => {
   const query = useMemo(
     () =>
       new ToriiQueryBuilder()
@@ -23,11 +23,12 @@ export const useGetTokensQuery = () => {
 
   const { entities, isLoading, refetch } = useSdkGetEntities({
     query,
+    nameSpace,
   });
   return { entities, isLoading, refetch };
 };
 
-export const useGetMetricsQuery = (key: string) => {
+export const useGetMetricsQuery = (key: string, nameSpace: string) => {
   const query = useMemo(
     () =>
       new ToriiQueryBuilder()
@@ -53,6 +54,7 @@ export const useGetMetricsQuery = (key: string) => {
   );
   const { entities, isLoading, refetch } = useSdkGetEntities({
     query,
+    nameSpace,
   });
   const entity = useMemo(
     () => (Array.isArray(entities) ? entities[0] : entities),
@@ -61,7 +63,10 @@ export const useGetMetricsQuery = (key: string) => {
   return { entity, isLoading, refetch };
 };
 
-export const useGetTournamentQuery = (tournamentId: BigNumberish) => {
+export const useGetTournamentQuery = (
+  tournamentId: BigNumberish,
+  nameSpace: string
+) => {
   const query = useMemo(
     () =>
       new ToriiQueryBuilder()
@@ -123,6 +128,7 @@ export const useGetTournamentQuery = (tournamentId: BigNumberish) => {
 
   const { entities, isLoading, refetch } = useSdkGetEntities({
     query,
+    nameSpace,
   });
   return { entities, isLoading, refetch };
 };
@@ -132,11 +138,13 @@ export const useGetRegistrationsForTournamentInTokenListQuery = ({
   tokenIds,
   limit,
   offset,
+  nameSpace,
 }: {
   tournamentId: BigNumberish;
   tokenIds: BigNumberish[];
   limit: number;
   offset: number;
+  nameSpace: string;
 }) => {
   const query = useMemo(
     () =>
@@ -176,6 +184,7 @@ export const useGetRegistrationsForTournamentInTokenListQuery = ({
 
   const { entities, isLoading, refetch } = useSdkGetEntities({
     query,
+    nameSpace,
   });
   return { entities, isLoading, refetch };
 };
@@ -201,6 +210,7 @@ export const useGetGameMetadataInListQuery = ({
   );
   const { entities, isLoading, refetch } = useSdkGetEntities({
     query,
+    nameSpace: gameNamespace,
   });
   return { entities, isLoading, refetch };
 };
@@ -232,6 +242,7 @@ export const useGetGameCounterQuery = ({
 
   const { entities, isLoading, refetch } = useSdkGetEntities({
     query,
+    nameSpace,
   });
   const entity = useMemo(
     () => (Array.isArray(entities) ? entities[0] : entities),
@@ -263,6 +274,7 @@ export const useGetGameSettingsQuery = (
 
   const { entities, isLoading, refetch } = useSdkGetEntities({
     query,
+    nameSpace: namespace,
   });
   return { entities, isLoading, refetch };
 };
@@ -284,6 +296,7 @@ export const useGetScoresQuery = (namespace: string, model: string) => {
   const { entities, isLoading, refetch } = useSdkGetEntities({
     query,
     enabled: isValidInput,
+    nameSpace: namespace,
   });
   return { entities, isLoading, refetch };
 };

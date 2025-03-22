@@ -92,7 +92,7 @@ const Tournament = () => {
   const [allPricesFound, setAllPricesFound] = useState(true);
   const isAdmin = address === ADMIN_ADDRESS;
   const isMainnet = selectedChainConfig.chainId === ChainId.SN_MAIN;
-
+  const [prevEntryCount, setPrevEntryCount] = useState<number | null>(null);
   const { data: tournamentsCount } = useGetTournamentsCount({
     namespace: nameSpace,
   });
@@ -124,9 +124,8 @@ const Tournament = () => {
     };
   }, [id, tournamentsCount]);
 
-  useGetTournamentQuery(addAddressPadding(bigintToHex(id!)));
+  useGetTournamentQuery(addAddressPadding(bigintToHex(id!)), nameSpace);
   useSubscribeTournamentQuery(addAddressPadding(bigintToHex(id!)));
-  // useSubscribePrizesQuery();
 
   const tournamentEntityId = useMemo(
     () => getEntityIdFromKeys([BigInt(id!)]),
@@ -164,13 +163,14 @@ const Tournament = () => {
     .map((detail) => detail.models[nameSpace].Prize) ??
     []) as unknown as Prize[];
 
-  const entryFeePrizes = extractEntryFeePrizes(
-    tournamentModel?.id,
-    tournamentModel?.entry_fee,
-    entryCountModel?.count ?? 0
-  );
+  const { tournamentCreatorShare, gameCreatorShare, distributionPrizes } =
+    extractEntryFeePrizes(
+      tournamentModel?.id,
+      tournamentModel?.entry_fee,
+      entryCountModel?.count ?? 0
+    );
 
-  const allPrizes = [...entryFeePrizes, ...prizes];
+  const allPrizes = [...distributionPrizes, ...prizes];
 
   const tournamentClaimedPrizes = state.getEntitiesByModel(
     nameSpace,
@@ -186,7 +186,7 @@ const Tournament = () => {
     []) as unknown as PrizeClaim[];
 
   const { claimablePrizes, claimablePrizeTypes } = getClaimablePrizes(
-    allPrizes,
+    [...allPrizes, ...tournamentCreatorShare, ...gameCreatorShare],
     claimedPrizes,
     totalSubmissions
   );
@@ -269,12 +269,12 @@ const Tournament = () => {
   });
 
   useEffect(() => {
-    const allPricesExist = Object.keys(prizes).every(
+    const allPricesExist = Object.keys(groupedByTokensPrizes).every(
       (symbol) => prices[symbol] !== undefined
     );
 
     setAllPricesFound(allPricesExist);
-  }, [prices, prizes]);
+  }, [prices, groupedByTokensPrizes]);
 
   const totalPrizesValueUSD = calculateTotalValue(
     groupedByTokensPrizes,
@@ -376,11 +376,22 @@ const Tournament = () => {
     return indexAddress(gameAddress);
   }, [gameAddress]);
 
-  const { data: ownedTokens } = useGetAccountTokenIds(
-    queryAddress,
-    [queryGameAddress ?? "0x0"],
-    true
-  );
+  const entryCount = Number(entryCountModel?.count);
+
+  const { data: ownedTokens, refetch: refetchOwnedTokens } =
+    useGetAccountTokenIds(queryAddress, [queryGameAddress ?? "0x0"], true);
+
+  useEffect(() => {
+    if (prevEntryCount !== null && prevEntryCount !== entryCount) {
+      const timer = setTimeout(() => {
+        refetchOwnedTokens();
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+
+    setPrevEntryCount(entryCount);
+  }, [entryCount, prevEntryCount]);
 
   if (loading) {
     return (
@@ -494,7 +505,7 @@ const Tournament = () => {
             hasEntryFee={hasEntryFee}
             entryFeePrice={entryFeePrice}
             tournamentModel={tournamentModel}
-            // entryCountModel={entryCountModel}
+            entryCountModel={entryCountModel}
             // gameCount={gameCount}
             tokens={tokens}
             tournamentsData={tournamentsData}
@@ -617,18 +628,16 @@ const Tournament = () => {
                 pulse={true}
               />
             </div>
-            <div className="sm:w-1/2">
-              <PrizesContainer
-                prizesExist={hasPrizes}
-                lowestPrizePosition={lowestPrizePosition}
-                groupedPrizes={groupedPrizes}
-                totalPrizesValueUSD={totalPrizesValueUSD}
-                totalPrizeNFTs={totalPrizeNFTs}
-                prices={prices}
-                pricesLoading={pricesLoading}
-                allPricesFound={allPricesFound}
-              />
-            </div>
+            <PrizesContainer
+              prizesExist={hasPrizes}
+              lowestPrizePosition={lowestPrizePosition}
+              groupedPrizes={groupedPrizes}
+              totalPrizesValueUSD={totalPrizesValueUSD}
+              totalPrizeNFTs={totalPrizeNFTs}
+              prices={prices}
+              pricesLoading={pricesLoading}
+              allPricesFound={allPricesFound}
+            />
           </div>
           <div className="flex flex-col sm:flex-row gap-5">
             {!isStarted ? (
@@ -647,7 +656,7 @@ const Tournament = () => {
                 gameScoreModel={gameScoreModel ?? ""}
                 gameScoreAttribute={gameScoreAttribute ?? ""}
                 isEnded={isEnded}
-                // leaderboardModel={leaderboardModel}
+                leaderboardModel={leaderboardModel}
               />
             ) : (
               <></>

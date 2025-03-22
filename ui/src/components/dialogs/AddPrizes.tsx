@@ -29,6 +29,7 @@ import { ALERT, CHECK, X } from "@/components/Icons";
 import { useAccount } from "@starknet-react/core";
 import { useConnectToSelectedChain } from "@/dojo/hooks/useChain";
 import { useEkuboPrices } from "@/hooks/useEkuboPrices";
+import { useDojo } from "@/context/dojo";
 
 export function AddPrizesDialog({
   open,
@@ -44,6 +45,7 @@ export function AddPrizesDialog({
   leaderboardSize: number;
 }) {
   const { address } = useAccount();
+  const { nameSpace } = useDojo();
   const { connect } = useConnectToSelectedChain();
   const { approveAndAddPrizes, getBalanceGeneral } = useSystemCalls();
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
@@ -65,7 +67,8 @@ export function AddPrizesDialog({
   const [hasInsufficientBalance, setHasInsufficientBalance] = useState(false);
 
   const { entity: metricsEntity } = useGetMetricsQuery(
-    addAddressPadding(TOURNAMENT_VERSION_KEY)
+    addAddressPadding(TOURNAMENT_VERSION_KEY),
+    nameSpace
   );
 
   const totalDistributionPercentage = useMemo(() => {

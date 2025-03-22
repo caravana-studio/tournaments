@@ -40,7 +40,7 @@ const TournamentTimeline = ({
     Number(BigInt(new Date().getTime()) / BigInt(1000));
 
   return (
-    <div className="flex flex-row items-center justify-center gap-10 sm:gap-20 mt-4">
+    <div className="flex flex-row items-center justify-center gap-10 sm:gap-20 3xl:gap-[100px] mt-4">
       {type === "fixed" && (
         <TimelineCard
           icon={

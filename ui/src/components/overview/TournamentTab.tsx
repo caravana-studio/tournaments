@@ -36,7 +36,7 @@ export const TournamentTab = ({
         <span className="hidden xl:inline">{label}</span>
         <span className="xl:hidden">{mobileLabel || label}</span>
       </Button>
-      {count !== undefined && count > 0 && (
+      {label !== "Ended Tournaments" && count !== undefined && count > 0 && (
         <span className="absolute -top-2 -right-1 flex items-center justify-center text-brand-subtle h-5 w-5 2xl:h-6 2xl:w-6 text-xs">
           <COUNTER />
           <span className="absolute inset-0 flex items-center justify-center text-brand text-center">

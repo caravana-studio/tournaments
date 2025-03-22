@@ -24,14 +24,16 @@ export type UseSdkGetEntityResult = {
 
 export type UseSdkGetEntitiesProps = {
   query: any;
+  nameSpace: string;
   enabled?: boolean;
 };
 
 export const useSdkGetEntities = ({
   query,
+  nameSpace,
   enabled = true,
 }: UseSdkGetEntitiesProps): UseSdkGetEntitiesResult => {
-  const { sdk, nameSpace } = useDojo();
+  const { sdk } = useDojo();
 
   const [isLoading, setIsLoading] = useState(false);
   const [entities, setEntities] = useState<EntityResult[] | null>(null);
@@ -69,7 +71,7 @@ export const useSdkGetEntities = ({
     if (enabled) {
       fetchEntities();
     }
-  }, [fetchEntities, enabled]);
+  }, [fetchEntities, enabled, nameSpace]);
 
   return {
     entities,

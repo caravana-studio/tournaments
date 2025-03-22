@@ -9,20 +9,21 @@ import {
 } from "@/components/ui/dialog";
 import { useSystemCalls } from "@/dojo/hooks/useSystemCalls";
 import { useAccount } from "@starknet-react/core";
-import { Tournament, Token } from "@/generated/models.gen";
+import { Tournament, Token, EntryCount } from "@/generated/models.gen";
 import {
   stringToFelt,
   feltToString,
   indexAddress,
   bigintToHex,
   formatNumber,
+  displayAddress,
 } from "@/lib/utils";
 import { addAddressPadding, BigNumberish } from "starknet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useConnectToSelectedChain } from "@/dojo/hooks/useChain";
 import { useGetUsernames } from "@/hooks/useController";
-import { CHECK, X, COIN, FAT_ARROW_RIGHT } from "@/components/Icons";
+import { CHECK, X, COIN, FAT_ARROW_RIGHT, USER } from "@/components/Icons";
 import {
   useGetAccountTokenIds,
   useGetTournamentRegistrants,
@@ -39,7 +40,7 @@ interface EnterTournamentDialogProps {
   hasEntryFee?: boolean;
   entryFeePrice?: number;
   tournamentModel: Tournament;
-  // entryCountModel: EntryCount;
+  entryCountModel: EntryCount;
   // gameCount: BigNumberish;
   tokens: Token[];
   tournamentsData: Tournament[];
@@ -53,9 +54,10 @@ type Proof = {
 };
 
 // Update the entriesLeftByTournament type to include either tournamentId or token
-type EntryCount = {
+type EntriesLeftCount = {
   tournamentId?: string;
   token?: string;
+  address?: string;
   entriesLeft: number;
 };
 
@@ -65,7 +67,7 @@ export function EnterTournamentDialog({
   hasEntryFee,
   entryFeePrice,
   tournamentModel,
-  // entryCountModel,
+  entryCountModel,
   // gameCount,
   tokens,
   tournamentsData,
@@ -150,6 +152,10 @@ export function EnterTournamentDialog({
   const requiredTokenAddresses = requiredTokenAddress
     ? [indexAddress(requiredTokenAddress ?? "")]
     : [];
+
+  const allowlistAddresses =
+    tournamentModel?.entry_requirement.Some?.entry_requirement_type?.variant
+      ?.allowlist;
 
   const { data: ownedTokens } = useGetAccountTokenIds(
     indexAddress(address ?? ""),
@@ -357,6 +363,13 @@ export function EnterTournamentDialog({
       }
     }
 
+    if (requirementVariant === "allowlist") {
+      methods.push({
+        type: "allowlist",
+        address: address,
+      });
+    }
+
     return methods;
   }, [
     hasEntryRequirement,
@@ -366,9 +379,8 @@ export function EnterTournamentDialog({
     hasParticipatedInTournamentMap,
     ownedTokenIds,
     tournamentsData,
+    entryCountModel?.count,
   ]);
-
-  console.log(qualificationMethods);
 
   const { data: qualificationEntries } = useGetTournamentQualificationEntries({
     namespace: nameSpace ?? "",
@@ -377,16 +389,14 @@ export function EnterTournamentDialog({
     active: qualificationMethods.length > 0,
   });
 
-  console.log(qualificationEntries);
-
   const { meetsEntryRequirements, proof, entriesLeftByTournament } = useMemo<{
     meetsEntryRequirements: boolean;
     proof: Proof;
-    entriesLeftByTournament: EntryCount[];
+    entriesLeftByTournament: EntriesLeftCount[];
   }>(() => {
     let canEnter = false;
     let proof: Proof = { tokenId: "" };
-    let entriesLeftByTournament: EntryCount[] = [];
+    let entriesLeftByTournament: EntriesLeftCount[] = [];
 
     // If no entry requirement, user can always enter
     if (!hasEntryRequirement) {
@@ -582,6 +592,55 @@ export function EnterTournamentDialog({
       }
     }
 
+    // Handle allowlist-based entry requirements
+    if (requirementVariant === "allowlist") {
+      // If no address, can't enter
+      if (!address) {
+        return {
+          meetsEntryRequirements: false,
+          proof: {},
+          entriesLeftByTournament: [],
+        };
+      }
+
+      // Check if the user's address is in the allowlist
+      const isInAllowlist = allowlistAddresses?.some(
+        (allowedAddress: string) =>
+          allowedAddress.toLowerCase() === address.toLowerCase()
+      );
+
+      if (!isInAllowlist) {
+        return {
+          meetsEntryRequirements: false,
+          proof: { tokenId: "" },
+          entriesLeftByTournament: [],
+        };
+      }
+
+      // Get current entry count for this address from qualificationEntries
+      const currentEntryCount = qualificationEntries[0]?.entry_count ?? 0;
+
+      // Calculate remaining entries
+      const remaining = (Number(entryLimit) ?? 0) - currentEntryCount;
+
+      // If this address has entries left
+      if (remaining > 0) {
+        canEnter = true;
+        entriesLeftByTournament = [
+          {
+            address,
+            entriesLeft: remaining,
+          },
+        ];
+      }
+
+      return {
+        meetsEntryRequirements: canEnter,
+        proof: { tokenId: "" }, // Empty proof for allowlist
+        entriesLeftByTournament,
+      };
+    }
+
     return {
       meetsEntryRequirements: canEnter,
       proof,
@@ -597,9 +656,9 @@ export function EnterTournamentDialog({
     ownedTokenIds,
     entryLimit,
     requirementVariant,
+    address,
+    allowlistAddresses,
   ]);
-
-  console.log(meetsEntryRequirements, proof, entriesLeftByTournament);
 
   // display the entry fee distribution
 
@@ -629,12 +688,12 @@ export function EnterTournamentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Enter Tournament</DialogTitle>
+          <DialogTitle className="text-xl">Enter Tournament</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {hasEntryFee && (
             <div className="flex flex-col gap-2">
-              <span className="text-lg">Entry Fee</span>
+              <span className="text-lg font-brand">Entry Fee</span>
               <div className="flex flex-col items-center">
                 <div className="flex flex-row items-center justify-center gap-2">
                   <div className="flex flex-row items-center gap-1">
@@ -663,13 +722,19 @@ export function EnterTournamentDialog({
                   </span>
                   {address &&
                     (hasBalance ? (
-                      <span className="w-8 h-8">
-                        <CHECK />
-                      </span>
+                      <div className="flex flex-row items-center gap-2">
+                        <span className="w-6 h-6">
+                          <CHECK />
+                        </span>
+                        <span className="text-sm">Enough Balance</span>
+                      </div>
                     ) : (
-                      <span className="w-8 h-8">
-                        <X />
-                      </span>
+                      <div className="flex flex-row items-center gap-2">
+                        <span className="w-6 h-6">
+                          <X />
+                        </span>
+                        <span className="text-sm">Not Enough Balance</span>
+                      </div>
                     ))}
                 </div>
                 <span className="w-10 rotate-90">
@@ -681,9 +746,12 @@ export function EnterTournamentDialog({
                       creatorAmount > 0 ? "" : "opacity-50"
                     }`}
                   >
-                    <span>Creator Fee</span>
+                    <span className="text-sm sm:text-base">
+                      {creatorShare}%
+                    </span>
+                    <span className="text-sm sm:text-base">Creator Fee</span>
                     <div className="flex flex-row items-center">
-                      <span className="text-sm">
+                      <span className="text-xs sm:text-sm">
                         +{formatNumber(creatorAmount)}
                       </span>
                       <img
@@ -691,7 +759,7 @@ export function EnterTournamentDialog({
                         alt={entryToken ?? ""}
                         className="w-5"
                       />
-                      <span className="text-sm text-neutral">
+                      <span className="hidden sm:block text-xs sm:text-sm text-neutral">
                         ~${formatNumber(creatorAmount * (entryFeePrice ?? 0))}
                       </span>
                     </div>
@@ -701,9 +769,10 @@ export function EnterTournamentDialog({
                       gameAmount > 0 ? "" : "opacity-50"
                     }`}
                   >
-                    <span>Game Fee</span>
+                    <span className="text-sm sm:text-base">{gameShare}%</span>
+                    <span className="text-sm sm:text-base">Game Fee</span>
                     <div className="flex flex-row items-center">
-                      <span className="text-sm">
+                      <span className="text-xs sm:text-sm">
                         +{formatNumber(gameAmount)}
                       </span>
                       <img
@@ -711,7 +780,7 @@ export function EnterTournamentDialog({
                         alt={entryToken ?? ""}
                         className="w-5"
                       />
-                      <span className="text-sm text-neutral">
+                      <span className="hidden sm:block text-xs sm:text-sm text-neutral">
                         ~${formatNumber(gameAmount * (entryFeePrice ?? 0))}
                       </span>
                     </div>
@@ -721,9 +790,12 @@ export function EnterTournamentDialog({
                       prizePoolAmount > 0 ? "" : "opacity-50"
                     }`}
                   >
-                    <span>Prize Pool</span>
+                    <span className="text-sm sm:text-base">
+                      {prizePoolShare}%
+                    </span>
+                    <span className="text-sm sm:text-base">Prize Pool</span>
                     <div className="flex flex-row items-center">
-                      <span className="text-sm">
+                      <span className="text-xs sm:text-sm">
                         +{formatNumber(prizePoolAmount)}
                       </span>
                       <img
@@ -731,7 +803,7 @@ export function EnterTournamentDialog({
                         alt={entryToken ?? ""}
                         className="w-5"
                       />
-                      <span className="text-sm text-neutral">
+                      <span className="hidden sm:block text-xs sm:text-sm text-neutral">
                         ~${formatNumber(prizePoolAmount * (entryFeePrice ?? 0))}
                       </span>
                     </div>
@@ -743,7 +815,7 @@ export function EnterTournamentDialog({
 
           {hasEntryRequirement && (
             <div className="flex flex-col gap-2">
-              <span className="text-lg">Entry Requirements</span>
+              <span className="text-lg font-brand">Entry Requirements</span>
               <span className="px-2">
                 {requirementVariant === "token" ? (
                   "You must hold the NFT"
@@ -756,7 +828,7 @@ export function EnterTournamentDialog({
                     }:`}
                   </div>
                 ) : (
-                  "Must hold ERC721"
+                  "Must be part of the allowlist"
                 )}
               </span>
               {requirementVariant === "token" ? (
@@ -797,26 +869,63 @@ export function EnterTournamentDialog({
                     <span className="text-warning">Connect Account</span>
                   )}
                 </div>
-              ) : (
-                requirementVariant === "tournament" && (
-                  <div className="flex flex-col gap-2 px-4">
-                    {tournamentsData.map((tournament) => (
-                      <div
-                        key={tournament.id}
-                        className="flex flex-row items-center justify-between border border-brand-muted rounded-md p-2"
-                      >
-                        <span>{feltToString(tournament.metadata.name)}</span>
-                        {address ? (
-                          tournamentRequirementVariant === "winners" ? (
-                            !!hasWonTournamentMap[tournament.id.toString()]
-                              ?.tokenId
-                          ) : !!hasParticipatedInTournamentMap[
-                              tournament.id.toString()
-                            ] ? (
+              ) : requirementVariant === "tournament" ? (
+                <div className="flex flex-col gap-2 px-4">
+                  {tournamentsData.map((tournament) => (
+                    <div
+                      key={tournament.id}
+                      className="flex flex-row items-center justify-between border border-brand-muted rounded-md p-2"
+                    >
+                      <span>{feltToString(tournament.metadata.name)}</span>
+                      {address ? (
+                        tournamentRequirementVariant === "winners" ? (
+                          !!hasWonTournamentMap[tournament.id.toString()] ? (
                             <div className="flex flex-row items-center gap-2">
                               <span className="w-5">
                                 <CHECK />
                               </span>
+                              {entriesLeftByTournament.find(
+                                (entry) =>
+                                  entry.tournamentId ===
+                                  tournament.id.toString()
+                              )?.entriesLeft ?? 0 > 0 ? (
+                                <span>
+                                  {`${
+                                    entriesLeftByTournament.find(
+                                      (entry) =>
+                                        entry.tournamentId ===
+                                        tournament.id.toString()
+                                    )?.entriesLeft
+                                  } ${
+                                    entriesLeftByTournament.find(
+                                      (entry) =>
+                                        entry.tournamentId ===
+                                        tournament.id.toString()
+                                    )?.entriesLeft === 1
+                                      ? "entry"
+                                      : "entries"
+                                  } left`}
+                                </span>
+                              ) : (
+                                <span>No entries left</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="w-5">
+                              <X />
+                            </span>
+                          )
+                        ) : !!hasParticipatedInTournamentMap[
+                            tournament.id.toString()
+                          ] ? (
+                          <div className="flex flex-row items-center gap-2">
+                            <span className="w-5">
+                              <CHECK />
+                            </span>
+                            {entriesLeftByTournament.find(
+                              (entry) =>
+                                entry.tournamentId === tournament.id.toString()
+                            )?.entriesLeft ?? 0 > 0 ? (
                               <span>
                                 {`${
                                   entriesLeftByTournament.find(
@@ -834,24 +943,56 @@ export function EnterTournamentDialog({
                                     : "entries"
                                 } left`}
                               </span>
-                            </div>
-                          ) : (
-                            <span className="w-5">
-                              <X />
-                            </span>
-                          )
+                            ) : (
+                              <span>No entries left</span>
+                            )}
+                          </div>
                         ) : (
-                          <span className="text-neutral">Connect Account</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )
+                          <span className="w-5">
+                            <X />
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-neutral">Connect Account</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : address ? (
+                <div className="flex flex-row items-center gap-2 px-4">
+                  <span className="w-8">
+                    <USER />
+                  </span>
+                  <span>{displayAddress(address)}</span>
+                  {meetsEntryRequirements ? (
+                    <div className="flex flex-row items-center gap-2">
+                      <span className="w-5">
+                        <CHECK />
+                      </span>
+                      <span>
+                        {`${
+                          entriesLeftByTournament.find(
+                            (entry) => entry.address === address
+                          )?.entriesLeft
+                        } entries left`}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-row items-center gap-2">
+                      <span className="w-5">
+                        <X />
+                      </span>
+                      <span>No entries</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="text-neutral">Connect Account</span>
               )}
             </div>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="playerName" className="text-lg">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="playerName" className="text-lg font-brand">
               Player Name
             </Label>
             <div className="flex flex-col gap-4">
