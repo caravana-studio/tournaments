@@ -3609,8 +3609,8 @@
       ]
     },
     {
-      "address": "0x6c6614da6a5bea6818f5eafed0d28aec4fd6fac81d97ca7744147fa02314345",
-      "class_hash": "0x65a72abacedc4f119ae41759aa99bfe0f0d8c973c512c71f7cf44e3fdc4039b",
+      "address": "0x1b37ea80d09a71961bedcc02ed93327312ce237237882e38edcd7d83d369e74",
+      "class_hash": "0x7a63e5cc83e8cad9ca4ee910b420a7b1303bfc3cfd65baff81016234bf2e2ce",
       "abi": [
         {
           "type": "impl",
@@ -3921,20 +3921,6 @@
           ]
         },
         {
-          "type": "enum",
-          "name": "core::option::Option::<core::integer::u32>",
-          "variants": [
-            {
-              "name": "Some",
-              "type": "core::integer::u32"
-            },
-            {
-              "name": "None",
-              "type": "()"
-            }
-          ]
-        },
-        {
           "type": "struct",
           "name": "core::array::Span::<core::integer::u64>",
           "members": [
@@ -3992,7 +3978,7 @@
           "members": [
             {
               "name": "entry_limit",
-              "type": "core::option::Option::<core::integer::u32>"
+              "type": "core::integer::u8"
             },
             {
               "name": "entry_requirement_type",
@@ -4109,6 +4095,10 @@
             {
               "name": "NFT",
               "type": "tournaments::components::models::tournament::NFTQualification"
+            },
+            {
+              "name": "Address",
+              "type": "core::starknet::contract_address::ContractAddress"
             }
           ]
         },
@@ -5156,7 +5146,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x2fa32243b81a35c918e176d4c986d6a8c1cf7ffc78c29de0424f25903245d88",
+      "class_hash": "0x3c01ae05c0f6f10bd363839149c09948d2f6491aad3707e5d8eef65f23945b0",
       "tag": "budokan_v_1_0_4-QualificationEntries",
       "selector": "0x84aa2be1a441d0eb7c261c4ca43f88845f1ef2350ec77f97329011f493ea49"
     },
@@ -5204,7 +5194,7 @@
     },
     {
       "members": [],
-      "class_hash": "0x4655e9e085581c0476ee908f2a7276f392ef72be400d9de644aca3711406724",
+      "class_hash": "0x16532bd5435b5f7eb2ffb43457dd1b92284154ec6b6d82349c0f098e31d8eaf",
       "tag": "budokan_v_1_0_4-Tournament",
       "selector": "0x477c9c161e9441c9061edf9f670e83b85c4c1a2f692223981c3359d1bd31184"
     },
